@@ -1,4 +1,4 @@
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -180,6 +180,8 @@ class HertzFitWidget(QtGui.QWidget):
 
         if file_hertz_result:
             for curve_indx, curve_hertz_result in file_hertz_result:
+                if curve_hertz_result is None:
+                    continue
                 if curve_indx == self.session.current_curve_index:
                     print(file_hertz_result)
                     self.hertz_E = curve_hertz_result.best_values['E0']

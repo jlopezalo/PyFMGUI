@@ -1,5 +1,5 @@
 import glob
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from pyafmgui.threads import LoadFilesThread

@@ -1,4 +1,4 @@
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets
 
 class CustomDialog(QtWidgets.QDialog):

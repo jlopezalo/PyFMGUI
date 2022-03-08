@@ -1,6 +1,6 @@
 from cmath import pi
 from re import T
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 import numpy as np

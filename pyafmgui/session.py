@@ -77,20 +77,20 @@ class Session:
                             row_dict.update({'ting_redchi': ting_result.redchi})
                             outputdf = outputdf.append(row_dict, ignore_index=True)
                         elif result_type == 'piezochar_results':
-                            row_df = pd.DataFrame(columns=['file_id', 'curve_indx', 'freqs', 'fi', 'amp_quot'])
+                            row_df = pd.DataFrame(columns=['file_id', 'curve_indx', 'frequency', 'fi_degrees', 'amp_quot'])
                             curve_indx = curve_result[0]
                             piezochar_result = curve_result[1]
-                            row_df['freqs'] = piezochar_result[0]
-                            row_df['fi'] = piezochar_result[1]
+                            row_df['frequency'] = piezochar_result[0]
+                            row_df['fi_degrees'] = piezochar_result[1]
                             row_df['amp_quot'] = piezochar_result[2]
                             row_df['file_id'] = file_id
                             row_df['curve_indx'] = curve_indx
                             outputdf = outputdf.append(row_df, ignore_index=True)
                         elif result_type == 'vdrag_results':
-                            row_df = pd.DataFrame(columns=['file_id', 'curve_indx', 'distances', 'freqs', 'Bh', 'Hd_real', 'Hd_imag'])
+                            row_df = pd.DataFrame(columns=['file_id', 'curve_indx', 'distances', 'frequency', 'Bh', 'Hd_real', 'Hd_imag'])
                             curve_indx = curve_result[0]
                             vdrag_result = curve_result[1]
-                            row_df['freqs'] = vdrag_result[0]
+                            row_df['frequency'] = vdrag_result[0]
                             row_df['Bh'] = vdrag_result[1]
                             row_df['Hd_real'] = vdrag_result[2].real
                             row_df['Hd_imag'] = vdrag_result[2].imag
@@ -99,10 +99,10 @@ class Session:
                             row_df['curve_indx'] = curve_indx
                             outputdf = outputdf.append(row_df, ignore_index=True)
                         elif result_type == 'microrheo_results':
-                            row_df = pd.DataFrame(columns=['file_id', 'curve_indx', 'freqs', 'G_storage', 'G_loss', 'losstan'])
+                            row_df = pd.DataFrame(columns=['file_id', 'curve_indx', 'frequency', 'G_storage', 'G_loss', 'losstan'])
                             curve_indx = curve_result[0]
                             microrheo_result = curve_result[1]
-                            row_df['freqs'] = microrheo_result[0]
+                            row_df['frequency'] = microrheo_result[0]
                             row_df['G_storage'] = microrheo_result[1]
                             row_df['G_loss'] = microrheo_result[2]
                             row_df['losstan'] = row_df['G_storage'] / row_df['G_loss']

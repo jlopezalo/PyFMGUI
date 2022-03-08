@@ -1,5 +1,5 @@
 import os
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -242,8 +242,8 @@ class MicrorheoWidget(QtGui.QWidget):
             t0 = plot_time[-1]
          
         if self.G_storage is not None and self.G_loss is not None:
-            self.p5.plot(self.freqs, self.G_storage, pen='r', symbol='o', symbolBrush='r')
-            self.p5.plot(self.freqs, self.G_loss, pen='b', symbol='o', symbolBrush='b')
+            self.p5.plot(self.freqs, self.G_storage, pen='r', symbol='o', symbolBrush='r', name="G Storage")
+            self.p5.plot(self.freqs, self.G_loss, pen='b', symbol='o', symbolBrush='b', name="G Loss")
         
         if self.Loss_tan is not None:
             self.p6.plot(self.freqs, self.Loss_tan, pen='g', symbol='o', symbolBrush='g')
@@ -251,30 +251,30 @@ class MicrorheoWidget(QtGui.QWidget):
         self.p1.setLabel('left', 'zHeight', 'm')
         self.p1.setLabel('bottom', 'Time', 's')
         self.p1.setTitle("zHeight-Time")
-        self.p1.addLegend((100, 30))
+        self.p1.addLegend()
 
         self.p2.setLabel('left', 'Deflection', 'm')
         self.p2.setLabel('bottom', 'Time', 's')
         self.p2.setTitle("Deflection-Time")
-        self.p2.addLegend((100, 30))
+        self.p2.addLegend()
         
         self.p3.setLabel('left', 'zHeight PSD')
         self.p3.setLabel('bottom', 'Frequency', 'Hz')
         self.p3.setTitle("FFT")
         self.p3.setLogMode(True, False)
-        self.p3.addLegend((100, 30))
+        self.p3.addLegend()
 
         self.p4.setLabel('left', 'Deflection PSD')
         self.p4.setLabel('bottom', 'Frequency', 'Hz')
         self.p4.setTitle("FFT")
         self.p4.setLogMode(True, False)
-        self.p4.addLegend((100, 30))
+        self.p4.addLegend()
 
         self.p5.setLabel('left', 'Complex Modulus', 'Pa')
         self.p5.setLabel('bottom', 'Frequency', 'Hz')
         self.p5.setTitle("Complex Modulus-Frequency")
         self.p5.setLogMode(True, True)
-        self.p4.addLegend((100, 30))
+        self.p5.addLegend()
 
         self.p6.setLabel('left', 'Loss Tangent')
         self.p6.setLabel('bottom', 'Frequency', 'Hz')

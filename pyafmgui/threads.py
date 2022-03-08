@@ -1,5 +1,5 @@
 import os
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtCore
 
 from jpkreader import load_jpk_file
@@ -190,7 +190,7 @@ class ProcessFilesThread(QtCore.QThread):
             deltat = time[1] - time[0]
             fs = 1 / deltat
             if self.session.piezo_char_data is not None:
-                piezoChar =  self.session.piezo_char_data.loc[self.session.piezo_char_data['freqs'] == frequency]
+                piezoChar =  self.session.piezo_char_data.loc[self.session.piezo_char_data['frequency'] == frequency]
                 if len(piezoChar) == 0:
                     print(f"The frequency {frequency} was not found in the piezo characterization dataframe")
                 else:
@@ -237,7 +237,7 @@ class ProcessFilesThread(QtCore.QThread):
             deltat = time[1] - time[0]
             fs = 1 / deltat
             if self.session.piezo_char_data is not None:
-                piezoChar =  self.session.piezo_char_data.loc[self.session.piezo_char_data['freqs'] == frequency]
+                piezoChar =  self.session.piezo_char_data.loc[self.session.piezo_char_data['frequency'] == frequency]
                 if len(piezoChar) == 0:
                     print(f"The frequency {frequency} was not found in the piezo characterization dataframe")
                 else:
@@ -257,10 +257,23 @@ class ProcessFilesThread(QtCore.QThread):
         G_loss_results = [x[2] for x in results]
         gamma2_results = [x[3] for x in results]
         return (frequencies_results, G_storage_results, G_loss_results, gamma2_results)
+    
+    def clear_file_results(self, file_id):
+        if file_id in self.session.hert_fit_results and self.method == "HertzFit":
+            self.session.hert_fit_results.pop(file_id)
+        elif file_id in self.session.ting_fit_results and self.method == "TingFit":
+            self.session.ting_fit_results.pop(file_id)
+        elif file_id in self.session.piezo_char_results and self.method == "PiezoChar":
+            self.session.piezo_char_results.pop(file_id)
+        elif file_id in self.session.vdrag_results and self.method == "VDrag":
+            self.session.vdrag_results.pop(file_id)
+        elif file_id in self.session.microrheo_results and self.method == "Microrheo":
+            self.session.microrheo_results.pop(file_id)
 
     def run(self):
         self.get_params()
         for i, (file_id, file) in enumerate(self.filedict.items()):
+            self.clear_file_results(file_id)
             self._signal_id.emit(file_id)
             ncurves = len(file.data)
             self.dialog.pbar_curves.setRange(0, ncurves-1)
@@ -311,9 +324,9 @@ class ProcessFilesThread(QtCore.QThread):
                     elif self.method == "PiezoChar":
                         piezo_char_result = self.do_piezo_char(file.data, curve_indx)
                         if file_id in self.session.piezo_char_results.keys():
-                            self.session.piezo_char_results[file_id].extend([(curve_indx, ting_result)])
+                            self.session.piezo_char_results[file_id].extend([(curve_indx, piezo_char_result)])
                         else:
-                            self.session.piezo_char_results[file_id] = [(curve_indx, ting_result)]
+                            self.session.piezo_char_results[file_id] = [(curve_indx, piezo_char_result)]
                     elif self.method == "VDrag":
                         vdrag_result = self.do_vdrag_char(file.data, curve_indx)
                         if file_id in self.session.vdrag_results.keys():

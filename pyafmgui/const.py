@@ -1,7 +1,7 @@
 from math import fabs
 from re import T
 from unicodedata import name
-import PyQt6
+import PyQt5
 from matplotlib.style import available
 import pyqtgraph.parametertree.parameterTypes as pTypes
 

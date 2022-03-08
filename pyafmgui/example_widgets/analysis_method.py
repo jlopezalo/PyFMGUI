@@ -6,7 +6,7 @@ as well as some customized parameter types
 
 """
 # import initExample ## Add path to library (just for examples; you do not need this)
-import PyQt6
+import PyQt5
 import pyqtgraph as pg
 # `makeAllParamTypes` creates several parameters from a dictionary of config specs.
 # This contains information about the options for each parameter so they can be directly

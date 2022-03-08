@@ -1,4 +1,4 @@
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -184,7 +184,10 @@ class TingFitWidget(QtGui.QWidget):
         file_ting_result = self.session.ting_fit_results.get(current_file_id, None)
 
         if file_ting_result:
+            print(file_ting_result)
             for curve_indx, curve_hertz_result, curve_ting_result in file_ting_result:
+                if curve_hertz_result is None or curve_ting_result is None:
+                    continue
                 if curve_indx == self.session.current_curve_index:
                     self.ting_E = curve_ting_result.best_values['E0']
                     self.ting_exp = curve_ting_result.best_values[exp_key]
@@ -248,7 +251,7 @@ class TingFitWidget(QtGui.QWidget):
         self.p2.setTitle("Force-Indentation Ting Fit")
         self.p3.setLabel('left', 'Deflection', 'm')
         self.p3.setLabel('bottom', 'zHeight', 'm')
-        self.p3.addLegend((30, 30))
+        self.p3.addLegend()
         self.p3.setTitle("Deflection-zHeight")
         self.p4.setLabel('left', 'Residuals')
         self.p4.setLabel('bottom', 'Indentation', 'm')

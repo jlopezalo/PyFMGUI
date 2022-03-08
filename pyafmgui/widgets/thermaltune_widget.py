@@ -1,6 +1,6 @@
 import os
 import numpy as np
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -134,7 +134,7 @@ class ThermalTuneWidget(QtGui.QWidget):
         self.p1.setLabel('left', 'Amplitude (pm^2/V)')
         self.p1.setLabel('bottom', 'Frequency', 'Hz')
         self.p1.setLogMode(True, True)
-        self.p1.addLegend((30, 30))
+        self.p1.addLegend()
 
         self.l.addItem(self.p1)
     

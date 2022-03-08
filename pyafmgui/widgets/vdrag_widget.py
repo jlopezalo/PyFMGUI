@@ -1,5 +1,5 @@
 import os
-import PyQt6
+import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -252,24 +252,24 @@ class VDragWidget(QtGui.QWidget):
         self.p1.setLabel('left', 'zHeight', 'm')
         self.p1.setLabel('bottom', 'Time', 's')
         self.p1.setTitle("zHeight-Time")
-        self.p1.addLegend((100, 30))
+        self.p1.addLegend()
 
         self.p2.setLabel('left', 'Deflection', 'm')
         self.p2.setLabel('bottom', 'Time', 's')
         self.p2.setTitle("Deflection-Time")
-        self.p2.addLegend((100, 30))
+        self.p2.addLegend()
         
         self.p3.setLabel('left', 'zHeight PSD')
         self.p3.setLabel('bottom', 'Freq', 'Hz')
         self.p3.setTitle("FFT")
         self.p3.setLogMode(True, False)
-        self.p3.addLegend((100, 30))
+        self.p3.addLegend()
 
         self.p4.setLabel('left', 'Deflection PSD')
         self.p4.setLabel('bottom', 'Freq', 'Hz')
         self.p4.setTitle("FFT")
         self.p4.setLogMode(True, False)
-        self.p4.addLegend((100, 30))
+        self.p4.addLegend()
 
         self.p5.setLabel('left', 'Hd')
         self.p5.setLabel('bottom', 'Distance', 'm')
