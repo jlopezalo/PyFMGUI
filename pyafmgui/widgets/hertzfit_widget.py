@@ -205,6 +205,7 @@ class HertzFitWidget(QtGui.QWidget):
         print(rov_PoC[0])
         poc = [rov_PoC[0], 0]
         indentation, force = get_force_vs_indentation_curve(analysis_data['height'], analysis_data['deflection'], poc, spring_k)
+        force = force - force[0]
         self.p1.plot(indentation, force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)

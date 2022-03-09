@@ -6,6 +6,7 @@ import re
 import matplotlib.pyplot as plt
 from scipy.special import kv
 from lmfit import Model, Parameters
+from pyafmgui.helpers.Sader_GCI_demo import SaderGCI_CalculateK
 
 def get_K_Classic(fR, Q, A1, temperature):
     BoltzmannConst = 1.38065e-23
@@ -13,7 +14,17 @@ def get_K_Classic(fR, Q, A1, temperature):
     energy = BoltzmannConst * abs_temp
     return energy / ( np.pi / 2 * fR * np.abs(Q) * A1**2) 
 
-def reynolds_number(rho, eta, omega, d):
+def reynolds_number_rect(rho, eta, omega, b):
+    # Input:
+        # rho:   density of surrounding fluid {kg/m^3}
+        # eta:   viscosity of surrounding fluid {kg/m.s}
+        # omega: cantilever-fluid resonant frequency
+        # b:     width of the cantilever {m}
+    # Output
+        # Re:    Reynolds Number {unitless}
+    return 0.250 * rho * omega * b**2 / eta
+
+def reynolds_number_V(rho, eta, omega, d):
     # Input:
         # rho:   density of surrounding fluid {kg/m^3}
         # eta:   viscosity of surrounding fluid {kg/m.s}
@@ -21,7 +32,7 @@ def reynolds_number(rho, eta, omega, d):
         # d:     width of the legs of cantilever {m}
     # Output
         # Re:    Reynolds Number {unitless}
-    return 0.250 * rho * omega * d**2 / eta
+    return rho * omega * d**2 / eta
 
 def omega(Re):
     tau = np.log10(Re)
@@ -45,24 +56,34 @@ def gamma_circ(Re):
 def gamma_rect(Re):
     return omega(Re) * gamma_circ(Re)
 
-def force_constant(rho, eta, b, L, Q, omega):
-    Re = reynolds_number(rho, eta, omega, b)
+def force_constant(rho, eta, b, L, d, Q, omega, cantType):
+    if cantType == 'Rectangular':
+        Re = reynolds_number_rect(rho, eta, omega, b)
+    elif cantType == 'V Shape':
+        Re = reynolds_number_V(rho, eta, omega, d)
     gamma_imag = np.imag(gamma_rect(Re))
     return 0.1906 * rho * b**2 * L * Q * gamma_imag * omega**2
 
-def Stark_Chi_force_constant(b, L, A1, fR1, Q1, Tc, RH, cantType, invOLS):
+def Stark_Chi_force_constant(b, L, d, A1, fR1, Q1, Tc, RH, cantType, username="", pwd="", selectedCantCode=""):
+    invOLS= 20*1e3 # Why this value?
     kB = 1.3807e-2*1e3
     T=273+Tc
     xsqrA1=np.pi*A1**2*fR1/2/Q1
-    if cantType == 'rectangular':
+    if cantType == 'Rectangular':
         Chi1= 0.8174
-    elif cantType == 'Vshaped':
+    elif cantType == 'V Shape':
         Chi1= 0.764
     kcantiA=Chi1*kB*T/xsqrA1
     rho, eta = air_properties(Tc, RH)
-    k0 = force_constant(rho, eta, b, L, Q1, fR1)
+    k0 = force_constant(rho, eta, b, L, d, Q1, fR1, cantType)
+    if username != "" and pwd != "" and selectedCantCode != "":
+        GCI_cant_springConst=SaderGCI_CalculateK(username, pwd, selectedCantCode, fR1, Q1)
+    else:
+        GCI_cant_springConst=np.NaN
     involsValue=invOLS*np.sqrt(kcantiA/k0)
+    invOLS_H=np.sqrt(2*kB*T/(np.pi*k0*(A1)**2/Q1*fR1))*invOLS/1000*np.sqrt(Chi1)
 
+    return k0, GCI_cant_springConst, involsValue, invOLS_H
 
 def qsat(Ta,Pa=None):
     P_default = 1020     # default air pressure for Kinneret [mbars]
@@ -111,25 +132,30 @@ def loadThermal(file_path):
         for value in file_header[0]:
             param_data = re.sub('[#:]', '', value).split(' ')
             # print(param_data)
-            if 'sensitivity' in param_data:
-                parameters['sensitivity'] = float(param_data[2]) * 1e3 #pm/V
-            elif 'parameter.f' in param_data:
+            # if 'sensitivity' in param_data:
+            #     parameters['sensitivity'] = float(param_data[2]) * 1e3 #pm/V
+            if 'parameter.f' in param_data:
                 parameters['resonancef'] = float(param_data[2]) * 1e3 #Hz
-        ampl = file_data['average'] * parameters['sensitivity'] ** 2
+        invOLS= 20*1e3 # Why this value?
+        # ampl = file_data['average'] * parameters['sensitivity'] ** 2
+        ampl = file_data['average'] * invOLS ** 2
         freq = file_data['Frequency']
         return ampl.values, freq.values, parameters
 
 def test_k_calibration():
     # To Do Make proper test
-    print(force_constant(1.18, 1.86e-5, 29e-6, 397e-6, 55.5, 17.36*10**3*2*3.1415))
-    print(force_constant(1.18, 1.86e-5, 29e-6, 197e-6, 136.0, 69.87*10**3*2*3.1415))
-    print(force_constant(1.18, 1.86e-5, 29e-6,  97e-6, 309.0, 278.7*10**3*2*3.1415))
+    # http://dx.doi.org/10.1063/1.1150021
+    # http://experimentationlab.berkeley.edu/sites/default/files/AFMImages/Sader.pdf
+    # force_constant(rho, eta, b, L, d, Q, omega
+    print(force_constant(1.18, 1.86e-5, 29e-6, 397e-6, 0, 55.5, 17.36*10**3*2*3.1415, 'Rectangular'))
+    print(force_constant(1.18, 1.86e-5, 29e-6, 197e-6, 0, 136.0, 69.87*10**3*2*3.1415, 'Rectangular'))
+    print(force_constant(1.18, 1.86e-5, 29e-6,  97e-6, 0, 309.0, 278.7*10**3*2*3.1415, 'Rectangular'))
 
-    print(force_constant(1.18, 1.86e-5, 20e-6, 203e-6, 17.6, 10.31*10**3*2*3.1415))
-    print(force_constant(1.18, 1.86e-5, 20e-6, 160e-6, 22.7, 15.61*10**3*2*3.1415))
-    print(force_constant(1.18, 1.86e-5, 20e-6, 128e-6, 30.9, 24.03*10**3*2*3.1415))
-    print(force_constant(1.18, 1.86e-5, 20e-6, 105e-6, 41.7, 36.85*10**3*2*3.1415))
-    print(force_constant(1.18, 1.86e-5, 20e-6,  77e-6, 60.3, 64.26*10**3*2*3.1415))
+    print(force_constant(1.18, 1.86e-5, 20e-6, 203e-6, 0, 17.6, 10.31*10**3*2*3.1415, 'Rectangular'))
+    print(force_constant(1.18, 1.86e-5, 20e-6, 160e-6, 0, 22.7, 15.61*10**3*2*3.1415, 'Rectangular'))
+    print(force_constant(1.18, 1.86e-5, 20e-6, 128e-6, 0, 30.9, 24.03*10**3*2*3.1415, 'Rectangular'))
+    print(force_constant(1.18, 1.86e-5, 20e-6, 105e-6, 0, 41.7, 36.85*10**3*2*3.1415, 'Rectangular'))
+    print(force_constant(1.18, 1.86e-5, 20e-6,  77e-6, 0, 60.3, 64.26*10**3*2*3.1415, 'Rectangular'))
 
 def ThermalFit(freq, ampl):
 

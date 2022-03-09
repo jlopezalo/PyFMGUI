@@ -171,6 +171,9 @@ class TingFitWidget(QtGui.QWidget):
         spring_k = analysis_params.child('Spring Constant').value()
         hertz_params = self.params.child('Ting Fit Params')
         poc_win = hertz_params.child('PoC Window').value()
+        vdragcorr = hertz_params.child('Correct Viscous Drag').value()
+        polyordr = hertz_params.child('Poly. Order').value()
+        rampspeed = hertz_params.child('Ramp Speed').value()
         model_type = hertz_params.child('Model Type').value()
         if model_type == 'numeric':
             contact_offset = hertz_params.child('Contact Offset').value() / 1e6
@@ -210,23 +213,25 @@ class TingFitWidget(QtGui.QWidget):
 
         rov_PoC = get_poc_RoV_method(ext_data['height'], ext_data['deflection'], win_size=poc_win)
         poc = [rov_PoC[0], 0]
-        ext_indentation, ext_force = get_force_vs_indentation_curve(ext_data['height'], ext_data['deflection'], poc, spring_k)
-        ret_indentation, ret_force = get_force_vs_indentation_curve(ret_data['height'], ret_data['deflection'], poc, spring_k)
-        self.p1.plot(ext_indentation, ext_force)
-        self.p1.plot(ret_indentation, ret_force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
             d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='r', movable=False, label='Hertz d0', labelOpts={'color':'r', 'position':0.7})
             self.p1.addItem(d0_vertical_line, ignoreBounds=True)
             poc[0] += self.hertz_d0
-            ext_indentation, ext_force = get_force_vs_indentation_curve(ext_data['height'], ext_data['deflection'], poc, spring_k)
-            ret_indentation, ret_force = get_force_vs_indentation_curve(ret_data['height'], ret_data['deflection'], poc, spring_k)
+        ext_indentation, ext_force = get_force_vs_indentation_curve(ext_data['height'], ext_data['deflection'], poc, spring_k)
+        ret_indentation, ret_force = get_force_vs_indentation_curve(ret_data['height'], ret_data['deflection'], poc, spring_k)
+        if vdragcorr:
+            ext_force, ret_force = correct_viscous_drag(
+                ext_indentation, ext_force, ret_indentation, ret_force, poly_order=polyordr, speed=rampspeed)
+        self.p1.plot(ext_indentation, ext_force)
+        self.p1.plot(ret_indentation, ret_force)
         indentation = np.r_[ext_indentation, ret_indentation]
         force = np.r_[ext_force, ret_force]
         fit_mask = indentation > (-1 * contact_offset)
         ind_fit = indentation[fit_mask] 
         force_fit = force[fit_mask]
+        force_fit = force_fit - force_fit[0]
         self.p2.plot(ind_fit - self.ting_d0, force_fit)
 
         if self.fit_data is not None:

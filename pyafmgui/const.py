@@ -88,6 +88,9 @@ class TingFitParams(pTypes.GroupParameter):
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
             {'name': 'PoC Window', 'type': 'int', 'value': 50},
+            {'name': 'Correct Viscous Drag', 'type': 'bool', 'value':False},
+            {'name': 'Poly. Order', 'type': 'int', 'value':2},
+            {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
             {'name': 'Model Type', 'type': 'list', 'limits': ['numeric', 'analytical']},
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
@@ -104,7 +107,11 @@ class TingFitParams(pTypes.GroupParameter):
         self.model_type = self.param('Model Type')
         self.model_type.sigValueChanged.connect(self.model_type_changed)
 
+        self.vdrag_corr = self.param('Correct Viscous Drag')
+        self.vdrag_corr.sigValueChanged.connect(self.vdrag_changed)
+
         self.model_type_changed()
+        self.vdrag_changed()
         
     def model_type_changed(self):
         if self.model_type.value() == 'numeric':
@@ -116,7 +123,14 @@ class TingFitParams(pTypes.GroupParameter):
             self.param('Contact Offset').show(False)
             self.param('Relaxation Function').show(False)
             self.param('Smoothing Window').show(False)
-
+    
+    def vdrag_changed(self):
+        if self.vdrag_corr.value():
+            self.param('Poly. Order').show(True)
+            self.param('Ramp Speed').show(True)
+        else:
+            self.param('Poly. Order').show(False)
+            self.param('Ramp Speed').show(False)
 
 general_params = {'name': 'General Options', 'type': 'group', 'children': [
         {'name': 'Compute All Curves', 'type': 'bool', 'value': False},
@@ -142,6 +156,7 @@ ambient_params = {'name': 'Ambient Params', 'type': 'group', 'children': [
     ]}
 
 cantilever_params = {'name': 'Cantilever Params', 'type': 'group', 'children': [
+        {'name': 'Canti Shape', 'type': 'list', 'limits': ['Rectangular', 'V Shape']},
         {'name': 'Lenght', 'type': 'float', 'value': None, 'units':'um'},
         {'name': 'Width', 'type': 'float', 'value': None, 'units':'um'},
         {'name': 'Width Legs', 'type': 'float', 'value': None, 'units':'um'},
@@ -149,9 +164,10 @@ cantilever_params = {'name': 'Cantilever Params', 'type': 'group', 'children': [
     ]}
 
 sader_method_params = {'name': 'Calibration Params', 'type': 'group', 'children': [
-        {'name': 'Min Frequency', 'type': 'float', 'value': None, 'units':'kHz'},
-        {'name': 'Max Frequency', 'type': 'float', 'value': None, 'units':'kHz'},
-        {'name': 'Model', 'type': 'str', 'value': 'SHO', 'readonly':True}
+        {'name': 'Model', 'type': 'str', 'value': 'SHO', 'readonly':True},
+        {'name': 'Sader API User', 'type': 'str', 'value': None},
+        {'name': 'Sader API Password', 'type': 'str', 'value': None},
+        {'name': 'Cantilever Code', 'type': 'str', 'value': None}
     ]}
 
 data_viewer_params = [plot_params]

@@ -73,6 +73,9 @@ class ProcessFilesThread(QtCore.QThread):
             ting_params = self.params.child('Ting Fit Params')
             self.poisson = ting_params.child('Poisson Ratio').value()
             self.poc_win = ting_params.child('PoC Window').value()
+            self.vdragcorr = ting_params.child('Correct Viscous Drag').value()
+            self.polyordr = ting_params.child('Poly. Order').value()
+            self.rampspeed = ting_params.child('Ramp Speed').value()
             self.E0 = ting_params.child('Init E0').value()
             self.d0 = ting_params.child('Init d0').value()
             self.f0 = ting_params.child('Init f0').value()
@@ -97,6 +100,7 @@ class ProcessFilesThread(QtCore.QThread):
         rov_PoC = get_poc_RoV_method(zheight, deflection, win_size=self.poc_win)
         poc = [rov_PoC[0], 0]
         indentation, force = get_force_vs_indentation_curve(zheight, deflection, poc, self.k)
+        force = force - force[0]
         p0 = [self.d0, self.f0, self.slope, self.E0]
         return HertzFit(indentation, force,  self.contact_model,  self.tip_param, p0,  self.poisson)
     
@@ -120,6 +124,9 @@ class ProcessFilesThread(QtCore.QThread):
         poc[0] += hertz_d0
         ext_indentation, ext_force = get_force_vs_indentation_curve(ext_zheight, ext_deflection, poc, self.k)
         ret_indentation, ret_force = get_force_vs_indentation_curve(ret_zheight, ret_deflection, poc, self.k)
+        if self.vdragcorr:
+            ext_force, ret_force = correct_viscous_drag(
+                ext_indentation, ext_force, ret_indentation, ret_force, poly_order=self.polyordr, speed=self.rampspeed)
         indentation = np.r_[ext_indentation, ret_indentation]
         force = np.r_[ext_force, ret_force]
         t0 = ext_time[-1]
@@ -127,6 +134,7 @@ class ProcessFilesThread(QtCore.QThread):
         fit_mask = indentation > (-1 * self.contact_offset)
         ind_fit = indentation[fit_mask] 
         force_fit = force[fit_mask]
+        force_fit = force_fit - force_fit[0]
         time_fit = time[fit_mask]
         time_fit = time_fit - time_fit[0]
 
