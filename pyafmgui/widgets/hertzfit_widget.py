@@ -197,14 +197,16 @@ class HertzFitWidget(QtGui.QWidget):
         self.p3.plot(ret_data['height'], ret_data['deflection'])
 
         if curve_seg == 'extend':
-            analysis_data = ext_data
+            zheight  = ext_data['height']
+            vdeflect = ext_data['deflection']
+            
         else:
-            analysis_data = ret_data
-
-        rov_PoC = get_poc_RoV_method(analysis_data['height'], analysis_data['deflection'], win_size=poc_win)
-        print(rov_PoC[0])
+            zheight  = ret_data['height'][::-1]
+            vdeflect = ret_data['deflection'][::-1]
+        
+        rov_PoC = get_poc_RoV_method(zheight, vdeflect, win_size=poc_win)
         poc = [rov_PoC[0], 0]
-        indentation, force = get_force_vs_indentation_curve(analysis_data['height'], analysis_data['deflection'], poc, spring_k)
+        indentation, force = get_force_vs_indentation_curve(zheight, vdeflect, poc, spring_k)
         force = force - force[0]
         self.p1.plot(indentation, force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})

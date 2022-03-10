@@ -93,10 +93,12 @@ class ProcessFilesThread(QtCore.QThread):
         curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)
         if self.curve_seg == 'extend':
             segment_data = curve_data[0][2]
+            zheight = segment_data['height']
+            deflection = segment_data['deflection']
         else:
             segment_data = curve_data[-1][2]
-        zheight = segment_data['height']
-        deflection = segment_data['deflection']
+            zheight = segment_data['height'][::-1]
+            deflection = segment_data['deflection'][::-1]
         rov_PoC = get_poc_RoV_method(zheight, deflection, win_size=self.poc_win)
         poc = [rov_PoC[0], 0]
         indentation, force = get_force_vs_indentation_curve(zheight, deflection, poc, self.k)
