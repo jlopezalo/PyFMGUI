@@ -69,9 +69,12 @@ class ThermalTuneWidget(QtGui.QWidget):
         self.pushButton.setText("Compute")
         self.pushButton.clicked.connect(self.do_thermalfit)
 
-        params_layout.addLayout(file_select_layout)
-        params_layout.addWidget(self.paramTree)
-        params_layout.addWidget(self.pushButton)
+        self.l2 = pg.GraphicsLayoutWidget()
+
+        params_layout.addLayout(file_select_layout, 2)
+        params_layout.addWidget(self.paramTree, 2)
+        params_layout.addWidget(self.pushButton, 1)
+        params_layout.addWidget(self.l2, 2)
 
         ## Add 3 plots into the first row (automatic position)
         self.l = pg.GraphicsLayoutWidget()

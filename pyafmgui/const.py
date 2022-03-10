@@ -159,8 +159,7 @@ cantilever_params = {'name': 'Cantilever Params', 'type': 'group', 'children': [
         {'name': 'Canti Shape', 'type': 'list', 'limits': ['Rectangular', 'V Shape']},
         {'name': 'Lenght', 'type': 'float', 'value': None, 'units':'um'},
         {'name': 'Width', 'type': 'float', 'value': None, 'units':'um'},
-        {'name': 'Width Legs', 'type': 'float', 'value': None, 'units':'um'},
-        {'name': 'Nominal K', 'type': 'float', 'value': None, 'units':'N/m'}
+        {'name': 'Width Legs', 'type': 'float', 'value': None, 'units':'um'}
     ]}
 
 sader_method_params = {'name': 'Calibration Params', 'type': 'group', 'children': [
