@@ -71,7 +71,6 @@ def SaderGCI_CalculateK( UserName, Password, LeverNumber, Frequency, QFactor ):
     </saderrequest>'''
     headers = {'user-agent': Version, 'Content-type': Type}
     r = requests.post(url, data=payload, headers=headers)
-    print (r.text)
     doc = etree.fromstring(r.content)
     if (doc.find('./status/code').text == 'OK'):
         print ("Sader GCI Spring Constant = "+doc.find('./cantilever/k_sader').text+', 95% C.I. Error = '+doc.find('./cantilever/percent').text+'% from '+doc.find('./cantilever/samples').text+' samples.')

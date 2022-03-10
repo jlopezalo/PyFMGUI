@@ -6,7 +6,7 @@ import re
 import matplotlib.pyplot as plt
 from scipy.special import kv
 from lmfit import Model, Parameters
-from pyafmgui.helpers.Sader_GCI_demo import SaderGCI_CalculateK
+from pyafmgui.helpers.Sader_GCI_demo import SaderGCI_CalculateK, SaderGCI_GetLeverList
 
 def get_K_Classic(fR, Q, A1, temperature):
     BoltzmannConst = 1.38065e-23
@@ -64,9 +64,9 @@ def force_constant(rho, eta, b, L, d, Q, omega, cantType):
     gamma_imag = np.imag(gamma_rect(Re))
     return 0.1906 * rho * b**2 * L * Q * gamma_imag * omega**2
 
-def Stark_Chi_force_constant(b, L, d, A1, fR1, Q1, Tc, RH, cantType, username="", pwd="", selectedCantCode=""):
-    invOLS= 20*1e3 # Why this value?
-    kB = 1.3807e-2*1e3
+def Stark_Chi_force_constant(b, L, d, A1, fR1, Q1, Tc, RH, medium, cantType, username="", pwd="", selectedCantCode=""):
+    invOLS= 20*1e3 #in pm/V
+    kB = 1.3807e-2*1e3 #in pNpm/K
     T=273+Tc
     xsqrA1=np.pi*A1**2*fR1/2/Q1
     if cantType == 'Rectangular':
@@ -74,14 +74,21 @@ def Stark_Chi_force_constant(b, L, d, A1, fR1, Q1, Tc, RH, cantType, username=""
     elif cantType == 'V Shape':
         Chi1= 0.764
     kcantiA=Chi1*kB*T/xsqrA1
-    rho, eta = air_properties(Tc, RH)
-    k0 = force_constant(rho, eta, b, L, d, Q1, fR1, cantType)
+    if medium == 'air':
+        rho, eta = air_properties(Tc, RH)
+    elif medium == 'water':
+        rho = 1000
+        eta = 0.9e-3
+    k0 = force_constant(rho, eta, b, L, d, Q1, fR1*2*np.pi, cantType)
     if username != "" and pwd != "" and selectedCantCode != "":
-        GCI_cant_springConst=SaderGCI_CalculateK(username, pwd, selectedCantCode, fR1, Q1)
+        print(selectedCantCode)
+        # SaderGCI_CalculateK( UserName, Password, LeverNumber, Frequency, QFactor)
+        # SaderGCI_GetLeverList(username, pwd)
+        GCI_cant_springConst=SaderGCI_CalculateK(username, pwd, selectedCantCode, fR1/1e3, Q1)
     else:
         GCI_cant_springConst=np.NaN
-    involsValue=invOLS*np.sqrt(kcantiA/k0)
-    invOLS_H=np.sqrt(2*kB*T/(np.pi*k0*(A1)**2/Q1*fR1))*invOLS/1000*np.sqrt(Chi1)
+    involsValue=invOLS*np.sqrt(kcantiA/k0)/1e3 
+    invOLS_H=np.sqrt(2*kB*T/(np.pi*k0*(A1)**2/Q1*fR1))*invOLS/1e3*np.sqrt(Chi1)
 
     return k0, GCI_cant_springConst, involsValue, invOLS_H
 

@@ -77,9 +77,9 @@ class ThermalTuneWidget(QtGui.QWidget):
         self.l = pg.GraphicsLayoutWidget()
         self.p1 = pg.PlotItem()
         self.p1legend = self.p1.addLegend()
-        self.air_roi = pg.LinearRegionItem(brush=None, pen='r')
+        self.air_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w')
         self.air_roi.setZValue(10)
-        self.lq_roi = pg.LinearRegionItem(brush=None, pen='b')
+        self.lq_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='y')
         self.lq_roi.setZValue(10)
 
         ## Put vertical label on left side
@@ -122,30 +122,30 @@ class ThermalTuneWidget(QtGui.QWidget):
         self.p1legend.clear()
 
         if self.inair_thermal_freq is not None and self.inair_thermal_ampl is not None:
-            air = self.p1.plot(self.inair_thermal_freq, self.inair_thermal_ampl, pen='r', name='Air Data')
+            air = self.p1.plot(self.inair_thermal_freq, self.inair_thermal_ampl, pen='w', name='Air Data')
             self.p1.addItem(self.air_roi, ignoreBounds=True)
             self.air_roi.setClipItem(air)
         
         if self.inliquid_thermal_freq is not None and self.inliquid_thermal_ampl is not None:
-            lq = self.p1.plot(self.inliquid_thermal_freq, self.inliquid_thermal_ampl, pen='b', name='Liquid Data')
+            lq = self.p1.plot(self.inliquid_thermal_freq, self.inliquid_thermal_ampl, pen='y', name='Liquid Data')
             self.p1.addItem(self.lq_roi, ignoreBounds=True)
             self.lq_roi.setClipItem(lq)
         
         if self.thermal_fit_air is not None:
-            self.p1.plot(self.freq_fit_air, self.thermal_fit_air, pen='w', name='Air SHO Fit')
+            self.p1.plot(self.freq_fit_air, self.thermal_fit_air, pen={'color':'c', 'width': 3}, name='Air SHO Fit')
             style = pg.PlotDataItem(pen=None)
-            self.p1legend.addItem(style, f'K Air: {self.k0_air:.2E}')
-            self.p1legend.addItem(style, f'K Air GCI: {self.GCI_cant_springConst_air:.2f}')
-            self.p1legend.addItem(style, f'InVOLS Air: { self.involsValue_air:.2f}')
-            self.p1legend.addItem(style, f'InVOLS H Air: {self.invOLS_H_air:.2f}')
+            self.p1legend.addItem(style, f'K Air: {self.k0_air:.3f} N/m')
+            self.p1legend.addItem(style, f'K Air GCI: {self.GCI_cant_springConst_air:.3f} N/m')
+            self.p1legend.addItem(style, f'InVOLS Air: { self.involsValue_air:.3f} nm/V')
+            self.p1legend.addItem(style, f'InVOLS H Air: {self.invOLS_H_air:.3f} nm/V')
         
         if self.thermal_fit_lq is not None:
-            self.p1.plot(self.freq_fit_lq, self.thermal_fit_lq, pen='g', name='Liquid SHO Fit')
+            self.p1.plot(self.freq_fit_lq, self.thermal_fit_lq, pen={'color':'g', 'width': 3}, name='Liquid SHO Fit')
             style = pg.PlotDataItem(pen=None)
-            self.p1legend.addItem(style, f'K Liquid: {self.k0_lq:.2E}')
-            self.p1legend.addItem(style, f'K Liquid GCI: {self.GCI_cant_springConst_lq:.2f}')
-            self.p1legend.addItem(style, f'InVOLS Liquid: { self.involsValue_lq:.2f}')
-            self.p1legend.addItem(style, f'InVOLS H Liquid: {self.invOLS_H_lq:.2f}')
+            self.p1legend.addItem(style, f'K Liquid: {self.k0_lq:.3f} N/m')
+            self.p1legend.addItem(style, f'K Liquid GCI: {self.GCI_cant_springConst_lq:.3f} N/m')
+            self.p1legend.addItem(style, f'InVOLS Liquid: { self.involsValue_lq:.3f} nm/V')
+            self.p1legend.addItem(style, f'InVOLS H Liquid: {self.invOLS_H_lq:.3f} nm/V')
 
         self.p1.setTitle("Amplitude-Frequency")
         self.p1.setLabel('left', 'Amplitude (pm^2/V)')
@@ -188,7 +188,8 @@ class ThermalTuneWidget(QtGui.QWidget):
             self.k0_air, self.GCI_cant_springConst_air, self.involsValue_air, self.invOLS_H_air =\
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
-                        A1_air, fR1_air, Q1_air, self.Tc, self.RH, self.cantType, self.username, self.pwd, self.selectedCantCode
+                        A1_air, fR1_air, Q1_air, self.Tc, self.RH, 'air',
+                        self.cantType, self.username, self.pwd, self.selectedCantCode
                     )
         # Liquid
         if self.inliquid_thermal_ampl is not None and self.inliquid_thermal_freq is not None:
@@ -207,6 +208,7 @@ class ThermalTuneWidget(QtGui.QWidget):
             self.k0_lq, self.GCI_cant_springConst_lq, self.involsValue_lq, self.invOLS_H_lq =\
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
-                        A1_lq, fR1_lq, Q1_lq, self.Tc, self.RH, self.cantType, self.username, self.pwd, self.selectedCantCode
+                        A1_lq, fR1_lq, Q1_lq, self.Tc, self.RH, 'water', 
+                        self.cantType, self.username, self.pwd, self.selectedCantCode
                     )
         self.update_plot()
