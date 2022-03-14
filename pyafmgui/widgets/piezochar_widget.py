@@ -236,7 +236,7 @@ class PiezoCharWidget(QtGui.QWidget):
         self.p4.setLogMode(True, False)
         self.p4.addLegend()
 
-        self.p5.setLabel('left', 'Fi')
+        self.p5.setLabel('left', 'Fi', '°')
         self.p5.setLabel('bottom', 'Frequency', 'Hz')
         self.p5.setTitle("Fi-Frequency")
         self.p5.setLogMode(True, False)

@@ -216,7 +216,7 @@ class TingFitWidget(QtGui.QWidget):
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
-            d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='r', movable=False, label='Hertz d0', labelOpts={'color':'r', 'position':0.7})
+            d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})
             self.p1.addItem(d0_vertical_line, ignoreBounds=True)
             poc[0] += self.hertz_d0
         ext_indentation, ext_force = get_force_vs_indentation_curve(ext_data['height'], ext_data['deflection'], poc, spring_k)
@@ -235,7 +235,7 @@ class TingFitWidget(QtGui.QWidget):
         self.p2.plot(ind_fit - self.ting_d0, force_fit)
 
         if self.fit_data is not None:
-            self.p2.plot(ind_fit - self.ting_d0, self.fit_data, pen ='r', name='Fit')
+            self.p2.plot(ind_fit - self.ting_d0, self.fit_data, pen ='g', name='Fit')
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')

@@ -183,7 +183,6 @@ class HertzFitWidget(QtGui.QWidget):
                 if curve_hertz_result is None:
                     continue
                 if curve_indx == self.session.current_curve_index:
-                    print(file_hertz_result)
                     self.hertz_E = curve_hertz_result.best_values['E0']
                     self.hertz_d0 = curve_hertz_result.best_values['delta0']
                     self.hertz_redchi = curve_hertz_result.redchi
@@ -212,12 +211,12 @@ class HertzFitWidget(QtGui.QWidget):
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
-            d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='r', movable=False, label='Hertz d0', labelOpts={'color':'r', 'position':0.7})
+            d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})
             self.p1.addItem(d0_vertical_line, ignoreBounds=True)
         self.p2.plot(indentation - self.hertz_d0, force)
  
         if self.fit_data is not None:
-            self.p2.plot(indentation - self.hertz_d0, self.fit_data, pen ='r', name='Fit')
+            self.p2.plot(indentation - self.hertz_d0, self.fit_data, pen ='g', name='Fit')
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')

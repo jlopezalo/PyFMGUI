@@ -1,4 +1,5 @@
 import os
+from unicodedata import name
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -243,8 +244,8 @@ class VDragWidget(QtGui.QWidget):
             t0 = plot_time[-1]
         
         if self.Hd is not None:
-            self.p5.plot(distances, self.Hd.real, symbol='o')
-            self.p5.plot(distances, self.Hd.imag, symbol='o')
+            self.p5.plot(distances, self.Hd.real, pen='r', symbol='o', symbolBrush='r', name='Hd Real')
+            self.p5.plot(distances, self.Hd.imag, pen='b', symbol='o', symbolBrush='b', name='Hd Imag')
         
         if self.Bh is not None:
             self.p6.plot(distances, self.Bh, symbol='o')
@@ -274,6 +275,7 @@ class VDragWidget(QtGui.QWidget):
         self.p5.setLabel('left', 'Hd')
         self.p5.setLabel('bottom', 'Distance', 'm')
         self.p5.setTitle("Hd-Distance")
+        self.p5.addLegend()
 
         self.p6.setLabel('left', 'Bh', 'Ns/m')
         self.p6.setLabel('bottom', 'Distance', 'm')

@@ -10,7 +10,9 @@ from scipy.fft import fft, fftfreq
 import pyafmgui.const as cts
 from pyafmgui.threads import ProcessFilesThread
 from pyafmgui.helpers.curve_utils import *
+from pyafmgui.helpers.sineFit_utils import SineFunc
 from pyafmgui.widgets.customdialog import CustomDialog
+from pyafmrheo.utils.signal_processing import *
 
 class MicrorheoWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -108,8 +110,12 @@ class MicrorheoWidget(QtGui.QWidget):
             self.filedict = self.session.loaded_files
         else:
             self.filedict = {self.session.current_file.file_id:self.session.current_file}
+        if self.params.child('Analysis Params').child('Method').value() == "FFT":
+            methodkey = "Microrheo"
+        else:
+            methodkey = "MicrorheoSine"
         self.dialog.pbar_files.setRange(0, len(self.filedict)-1)
-        self.thread = ProcessFilesThread(self.session, self.params, self.filedict, "Microrheo", self.dialog)
+        self.thread = ProcessFilesThread(self.session, self.params, self.filedict, methodkey, self.dialog)
         self.thread._signal_id.connect(self.signal_accept2)
         self.thread._signal_file_progress.connect(self.signal_accept)
         self.thread._signal_curve_progress.connect(self.signal_accept3)
@@ -197,13 +203,17 @@ class MicrorheoWidget(QtGui.QWidget):
         self.G_storage = None
         self.G_loss = None
         self.Loss_tan = None
+        self.ind_results = None
+        self.defl_results = None
 
         analysis_params = self.params.child('Analysis Params')
         current_file_id = self.current_file.file_id
         current_file_data = self.current_file.data
         current_curve_indx = self.session.current_curve_index
         height_channel = analysis_params.child('Height Channel').value()
+        spring_k = analysis_params.child('Spring Constant').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
+        method = analysis_params.child('Method').value()
 
         curve_data = preprocess_curve(current_file_data, current_curve_indx, height_channel, deflection_sens)
 
@@ -217,15 +227,20 @@ class MicrorheoWidget(QtGui.QWidget):
         if microrheo_result:
             for curve_indx, curve_microrheo_result in microrheo_result:
                 if curve_indx == self.session.current_curve_index:
+                    print(curve_microrheo_result)
                     self.freqs = curve_microrheo_result[0]
                     self.G_storage = np.array(curve_microrheo_result[1])
                     self.G_loss = np.array(curve_microrheo_result[2])
                     self.Loss_tan = self.G_loss / self.G_storage
-
+                    if method == 'Sine Fit':
+                        self.ind_results = curve_microrheo_result[3]
+                        self.defl_results = curve_microrheo_result[4]
+                    
         t0 = 0
         n_segments = len(modulation_segs_data)
         for i, seg_data in enumerate(modulation_segs_data):
             time = seg_data['time']
+            plot_time = time + t0
             deltat = time[1] - time[0]
             nfft = len(seg_data['deflection'])
             W = fftfreq(nfft, d=deltat)
@@ -234,11 +249,10 @@ class MicrorheoWidget(QtGui.QWidget):
             fft_deflect = fft(seg_data['deflection'], nfft)
             psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
             L = np.arange(1, np.floor(nfft/2), dtype='int')
-            plot_time = time + t0
-            self.p1.plot(plot_time, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-            self.p2.plot(plot_time, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
             self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
             self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+            self.p1.plot(plot_time, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+            self.p2.plot(plot_time, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
             t0 = plot_time[-1]
          
         if self.G_storage is not None and self.G_loss is not None:

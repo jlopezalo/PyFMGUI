@@ -27,6 +27,7 @@ class AnalysisParams(pTypes.GroupParameter):
 
         if self.mode == "microrheo":
             self.addChildren([
+                {'name': 'Method', 'type': 'list', 'limits':['FFT', 'Sine Fit']},
                 {'name': 'Max Frequency', 'type': 'int', 'value': None, 'units':'Hz'},
                 {'name': 'B Coef', 'type': 'float', 'value': None, 'units':'Ns/m'}
             ])
