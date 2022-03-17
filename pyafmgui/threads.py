@@ -7,9 +7,7 @@ from jpkreader import load_jpk_file
 from pyafmrheo.utils.force_curves import *
 from pyafmrheo.utils.signal_processing import *
 from pyafmrheo.hertz_fit import HertzFit
-from pyafmrheo.ting_numerical_fit import TingNumericalFit
-from pyafmrheo.models.ting_numerical import simple_power_law
-from pyafmrheo.ting_analytical_fit import TingAnaliticalFit
+from pyafmrheo.ting_fit import TingFit
 from pyafmrheo.models.rheology import ComputePiezoLag, ComputeBh, ComputeComplexModulus
 
 import pyafmgui.const as ct
@@ -67,7 +65,7 @@ class ProcessFilesThread(QtCore.QThread):
             self.poisson = hertz_params.child('Poisson Ratio').value()
             self.poc_win = hertz_params.child('PoC Window').value()
             self.E0 = hertz_params.child('Init E0').value()
-            self.d0 = hertz_params.child('Init d0').value()
+            self.d0 = hertz_params.child('Init d0').value() / 1e9 
             self.f0 = hertz_params.child('Init f0').value()
             self.slope = hertz_params.child('Init Slope').value()
         elif self.method == "TingFit":
@@ -77,18 +75,18 @@ class ProcessFilesThread(QtCore.QThread):
             self.vdragcorr = ting_params.child('Correct Viscous Drag').value()
             self.polyordr = ting_params.child('Poly. Order').value()
             self.rampspeed = ting_params.child('Ramp Speed').value() / 1e6
-            self.E0 = ting_params.child('Init E0').value()
-            self.d0 = ting_params.child('Init d0').value()
-            self.f0 = ting_params.child('Init f0').value()
+            self.t0 = ting_params.child('t0').value()
+            self.d0 = ting_params.child('Init d0').value() / 1e9 
             self.slope = ting_params.child('Init Slope').value()
-            self.dTp = ting_params.child('dTp').value()
+            self.E0 = ting_params.child('Init E0').value()
+            self.tc = ting_params.child('Init tc').value()
             self.fluid_exp = ting_params.child('Init Fluid. Exp.').value()
+            self.f0 = ting_params.child('Init f0').value()
+            self.vdrag = ting_params.child('Viscous Drag').value()
             self.model_type = ting_params.child('Model Type').value()
-            if self.model_type == 'numeric':
-                self.smoothing_win = ting_params.child('Smoothing Window').value()
-                self.contact_offset = ting_params.child('Contact Offset').value() / 1e6
-            else:
-                self.contact_offset = 0
+            self.smoothing_win = ting_params.child('Smoothing Window').value()
+            self.contact_offset = ting_params.child('Contact Offset').value() / 1e6
+                
     
     def do_hertz_fit(self, file_data, curve_indx):
         curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)
@@ -140,24 +138,17 @@ class ProcessFilesThread(QtCore.QThread):
         force_fit = force_fit - force_fit[0]
         time_fit = time[fit_mask]
         time_fit = time_fit - time_fit[0]
+        tm = time_fit[np.argmax(force_fit)]
+        tc = tm/2
 
-        dT = time_fit[1] - time_fit[0]
-        tmax = time_fit[ind_fit.argmax()]
-        v0t = (ext_zheight[-1] - ext_zheight[0]) / (ext_time[-1] - ext_time[0])
-        v0r = -1 * (ret_zheight[-1] - ret_zheight[0]) / (ret_time[-1] - ret_time[0])
+        p0_ting = [self.t0, hertz_E, tc, self.fluid_exp, self.f0]
 
-        if self.model_type == 'numeric':
-            p0_ting_num = [hertz_E, self.fluid_exp, self.f0, self.slope, hertz_d0]
-            return TingNumericalFit(
-                ind_fit, force_fit, time_fit, self.contact_model, self.tip_param, p0_ting_num, dT, self.dTp,
-                self.smoothing_win, simple_power_law, self.poisson
-            ), hertz_result
+        ting_result = TingFit(
+            force_fit, ind_fit, time_fit, self.contact_model, self.tip_param,
+            p0_ting, self.model_type, self.poisson, self.vdrag, self.smoothing_win
+        )
 
-        elif self.model_type == 'analytical':
-            p0_ting_anal = [hertz_E, self.fluid_exp, self.f0, self.slope, tmax]
-            return TingAnaliticalFit(
-                force_fit, time_fit, self.contact_model, self.tip_param, p0_ting_anal, self.dTp, v0t, v0r, self.poisson
-            ), hertz_result
+        return ting_result, hertz_result
     
     def do_piezo_char(self, file_data, curve_indx):
         curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)
@@ -374,9 +365,8 @@ class ProcessFilesThread(QtCore.QThread):
                 elif self.method == "TingFit":
                     try:
                         ting_result, hertz_result = self.do_ting_fit(file.data, self.session.current_curve_index)
-                    except (ValueError, TypeError):
-                        hertz_result = None
-                        ting_result = None
+                    except (ValueError, IndexError, TypeError):
+                        ting_result, hertz_result = None, None
                     self.session.ting_fit_results[file_id] = [(self.session.current_curve_index, hertz_result, ting_result)]
                 elif self.method == "PiezoChar":
                     piezo_char_result = self.do_piezo_char(file.data, self.session.current_curve_index)
@@ -404,9 +394,8 @@ class ProcessFilesThread(QtCore.QThread):
                     elif self.method == "TingFit":
                         try:
                             ting_result, hertz_result = self.do_ting_fit(file.data, curve_indx)
-                        except (ValueError, TypeError, IndexError): #Handle this better? Logging?
-                            hertz_result = None
-                            ting_result = None
+                        except (ValueError, IndexError, TypeError):
+                            ting_result, hertz_result = None, None
                         if file_id in self.session.ting_fit_results.keys():
                             self.session.ting_fit_results[file_id].extend([(curve_indx, hertz_result, ting_result)])
                         else:

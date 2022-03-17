@@ -19,8 +19,8 @@ class AnalysisParams(pTypes.GroupParameter):
             {'name': 'Spring Constant', 'type': 'float', 'value': None, 'units':'N/m'},
             {'name': 'Deflection Sensitivity', 'type': 'float', 'value': None, 'units':'nm/V'},
             {'name': 'Contact Model', 'type': 'list', 'limits': available_geometries},
-            {'name': 'Tip Angle', 'type': 'float', 'value': None, 'units':'°'},
-            {'name': 'Tip Radius', 'type': 'float', 'value': None, 'units':'nm'},
+            {'name': 'Tip Angle', 'type': 'float', 'value': 35, 'units':'°'},
+            {'name': 'Tip Radius', 'type': 'float', 'value': 75, 'units':'nm'},
             {'name': 'Tip Area', 'type': 'float', 'value': None},
             {'name': 'Curve Segment', 'type': 'list', 'limits':['extend', 'retract']}
         ])
@@ -92,16 +92,17 @@ class TingFitParams(pTypes.GroupParameter):
             {'name': 'Correct Viscous Drag', 'type': 'bool', 'value':False},
             {'name': 'Poly. Order', 'type': 'int', 'value':2},
             {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
-            {'name': 'Model Type', 'type': 'list', 'limits': ['numeric', 'analytical']},
-            {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
+            {'name': 'Model Type', 'type': 'list', 'limits': ['numerical', 'analytical']},
+            {'name': 't0', 'type': 'int', 'value': 1, 'units':'s'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
-            {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},
             {'name': 'Init Slope', 'type': 'float', 'value': 0},
-            {'name': 'dTp', 'type': 'float', 'value': 1, 'units':'s'},
+            {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
+            {'name': 'Init tc', 'type': 'float', 'value': 0, 'units':'s'},
+            {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},
+            {'name': 'Viscous Drag', 'type': 'float', 'value': 0},
             {'name': 'Init Fluid. Exp.', 'type': 'float', 'value': 0.20},
             {'name': 'Contact Offset', 'type': 'float', 'value': 1, 'units':'um'},
-            {'name': 'Smoothing Window', 'type': 'int', 'value': 5, 'units':'points'},
-            {'name': 'Relaxation Function', 'type': 'str', 'value': 'Simple Power Law', 'readonly':True},
+            {'name': 'Smoothing Window', 'type': 'int', 'value': 5, 'units':'points'}
 
         ])
 
@@ -115,14 +116,10 @@ class TingFitParams(pTypes.GroupParameter):
         self.vdrag_changed()
         
     def model_type_changed(self):
-        if self.model_type.value() == 'numeric':
-            self.param('Contact Offset').show(True)
-            self.param('Relaxation Function').show(True)
+        if self.model_type.value() == 'numerical':
             self.param('Smoothing Window').show(True)
 
         elif self.model_type.value() == 'analytical':
-            self.param('Contact Offset').show(False)
-            self.param('Relaxation Function').show(False)
             self.param('Smoothing Window').show(False)
     
     def vdrag_changed(self):
@@ -134,7 +131,7 @@ class TingFitParams(pTypes.GroupParameter):
             self.param('Ramp Speed').show(False)
 
 general_params = {'name': 'General Options', 'type': 'group', 'children': [
-        {'name': 'Compute All Curves', 'type': 'bool', 'value': False},
+        {'name': 'Compute All Curves', 'type': 'bool', 'value': True},
         {'name': 'Compute All Files', 'type': 'bool', 'value': False}
     ]}
 

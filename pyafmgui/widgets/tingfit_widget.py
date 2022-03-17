@@ -161,6 +161,7 @@ class TingFitWidget(QtGui.QWidget):
         self.ting_d0 = 0
         self.fit_data = None
         self.residual = None
+        self.ting_tc = None
 
         analysis_params = self.params.child('Analysis Params')
         current_file_id = self.current_file.file_id
@@ -173,31 +174,21 @@ class TingFitWidget(QtGui.QWidget):
         poc_win = hertz_params.child('PoC Window').value()
         vdragcorr = hertz_params.child('Correct Viscous Drag').value()
         polyordr = hertz_params.child('Poly. Order').value()
-        rampspeed = hertz_params.child('Ramp Speed').value()
-        model_type = hertz_params.child('Model Type').value()
-        if model_type == 'numeric':
-            contact_offset = hertz_params.child('Contact Offset').value() / 1e6
-            exp_key  = 'alpha'
-        else:
-            contact_offset = 0
-            exp_key  = 'beta'
+        rampspeed = hertz_params.child('Ramp Speed').value() / 1e6
+        contact_offset = hertz_params.child('Contact Offset').value() / 1e6
 
         curve_data = preprocess_curve(current_file_data, current_curve_indx, height_channel, deflection_sens)
 
         file_ting_result = self.session.ting_fit_results.get(current_file_id, None)
 
         if file_ting_result:
-            print(file_ting_result)
             for curve_indx, curve_hertz_result, curve_ting_result in file_ting_result:
                 if curve_hertz_result is None or curve_ting_result is None:
                     continue
                 if curve_indx == self.session.current_curve_index:
                     self.ting_E = curve_ting_result.best_values['E0']
-                    self.ting_exp = curve_ting_result.best_values[exp_key]
-                    if model_type == 'numeric':
-                        self.ting_d0 = curve_ting_result.best_values['d0']
-                    else:
-                        self.ting_d0 = self.hertz_d0
+                    self.ting_exp = curve_ting_result.best_values['betaE']
+                    self.ting_tc = curve_ting_result.best_values['tc']
                     self.ting_redchi = curve_ting_result.redchi
                     self.hertz_E = curve_hertz_result.best_values['E0']
                     self.hertz_d0 = curve_hertz_result.best_values['delta0']
@@ -228,10 +219,16 @@ class TingFitWidget(QtGui.QWidget):
         self.p1.plot(ret_indentation, ret_force)
         indentation = np.r_[ext_indentation, ret_indentation]
         force = np.r_[ext_force, ret_force]
+        time = np.r_[ext_data['time'], ret_data['time']]
         fit_mask = indentation > (-1 * contact_offset)
         ind_fit = indentation[fit_mask] 
         force_fit = force[fit_mask]
         force_fit = force_fit - force_fit[0]
+        time_fit = time[fit_mask]
+        time_fit = time_fit - time_fit[0]
+        if self.ting_tc:
+            ting_d0_idx = FindValueIndex(time_fit, self.ting_tc)
+            self.ting_d0 = ind_fit[ting_d0_idx]
         self.p2.plot(ind_fit - self.ting_d0, force_fit)
 
         if self.fit_data is not None:
