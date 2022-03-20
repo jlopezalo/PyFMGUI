@@ -1,4 +1,5 @@
 import os
+from unicodedata import name
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -87,6 +88,9 @@ class MicrorheoWidget(QtGui.QWidget):
         self.p5 = pg.PlotItem()
         self.p6 = pg.PlotItem()
         self.p7 = pg.PlotItem()
+
+        self.p3legend = self.p3.addLegend()
+        self.p4legend = self.p4.addLegend()
 
         ## Put vertical label on left side
         main_layout.addLayout(params_layout, 1)
@@ -195,7 +199,9 @@ class MicrorheoWidget(QtGui.QWidget):
         self.p1.clear()
         self.p2.clear()
         self.p3.clear()
+        self.p3legend.clear()
         self.p4.clear()
+        self.p4legend.clear()
         self.p5.clear()
         self.p6.clear()
 
@@ -290,18 +296,22 @@ class MicrorheoWidget(QtGui.QWidget):
                 self.p2.plot(plot_time_1, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
                 t0 = plot_time_1[-1]
                 t0_2 = plot_time_2[-1]
-            
-            self.p3.setLabel('left', 'Indentation Detrended', 'm')
+
+            self.p3.setLabel('left', 'Detrended Indentation', 'm')
             self.p3.setLabel('bottom', 'Time', 's')
-            self.p3.setTitle("Indentation Sine Fit")
+            self.p3.setTitle("Detrended Indentation-Time")
             self.p3.setLogMode(False, False)
             self.p3.addLegend()
 
-            self.p4.setLabel('left', 'Deflection Detrended', 'm')
+            self.p4.setLabel('left', 'Detrended Deflection', 'm')
             self.p4.setLabel('bottom', 'Time', 's')
-            self.p4.setTitle("Deflection Sine Fit")
+            self.p4.setTitle("Detrended Deflection-Time")
             self.p4.setLogMode(False, False)
-            self.p4.addLegend()
+
+            if self.ind_results is not None and self.defl_results is not None:
+                style = pg.PlotDataItem(pen='g')
+                self.p3legend.addItem(style, "Sine Fit")
+                self.p4legend.addItem(style, "Sine Fit")
          
         if self.G_storage is not None and self.G_loss is not None:
             self.p5.plot(self.freqs, self.G_storage, pen='r', symbol='o', symbolBrush='r', name="G Storage")
