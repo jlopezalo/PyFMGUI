@@ -14,6 +14,8 @@ class HertzFitWidget(QtGui.QWidget):
         super(HertzFitWidget, self).__init__(parent)
         self.session = session
         self.current_file = None
+        self.min_val_line = None
+        self.max_val_line = None
         self.file_dict = {}
         self.session.hertz_fit_widget = self
         self.init_gui()
@@ -186,8 +188,8 @@ class HertzFitWidget(QtGui.QWidget):
                     self.hertz_E = curve_hertz_result.best_values['E0']
                     self.hertz_d0 = curve_hertz_result.best_values['delta0']
                     self.hertz_redchi = curve_hertz_result.redchi
-                    self.fit_data = curve_hertz_result.best_fit
-                    self.residual = curve_hertz_result.residual
+                    self.fit_data = curve_hertz_result
+                    # self.residual = curve_hertz_result.residual
 
         ext_data = curve_data[0][2]
         ret_data = curve_data[-1][2]
@@ -205,24 +207,27 @@ class HertzFitWidget(QtGui.QWidget):
         
         rov_PoC = get_poc_RoV_method(zheight, vdeflect, win_size=poc_win)
         poc = [rov_PoC[0], 0]
-        indentation, force = get_force_vs_indentation_curve(zheight, vdeflect, poc, spring_k)
-        force = force - force[0]
-        self.p1.plot(indentation, force)
+        self.indentation, self.force = get_force_vs_indentation_curve(zheight, vdeflect, poc, spring_k)
+        self.force = self.force - self.force[0]
+        self.p1.plot(self.indentation, self.force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
             d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})
             self.p1.addItem(d0_vertical_line, ignoreBounds=True)
-        self.p2.plot(indentation - self.hertz_d0, force)
+        self.p2.plot(self.indentation - self.hertz_d0, self.force)
+
+        self.update_fit_range()
  
         if self.fit_data is not None:
-            self.p2.plot(indentation - self.hertz_d0, self.fit_data, pen ='g', name='Fit')
+            x = self.indentation
+            self.p2.plot(x - self.hertz_d0, self.fit_data.eval(indentation=x), pen ='g', name='Fit')
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')
             self.p2legend.addItem(style, f'Red. Chi: {self.hertz_redchi:.3E}')
         if self.residual is not None:
-            res = self.p4.plot(indentation - self.hertz_d0, self.residual, pen=None, symbol='o')
+            res = self.p4.plot(self.indentation - self.hertz_d0, self.residual, pen=None, symbol='o')
             res.setSymbolSize(5)
         
         self.p1.setLabel('left', 'Force', 'N')
@@ -244,7 +249,31 @@ class HertzFitWidget(QtGui.QWidget):
         self.l.nextRow()
         self.l.addItem(self.p3)
         self.l.addItem(self.p4)
-
+    
+    def update_fit_range(self):
+        hertz_params = self.params.child('Hertz Fit Params')
+        fit_range_type = hertz_params.child('Fit Range Type').value()
+        if fit_range_type == 'indentation':
+            angle=90
+            min_val = hertz_params.child('Min Indentation').value() / 1e9
+            max_val = hertz_params.child('Max Indentation').value() / 1e9
+            if max_val == 0.0:
+                max_val = np.max(self.indentation - self.hertz_d0)
+                hertz_params.child('Max Indentation').setValue(max_val * 1e9)
+        elif fit_range_type == 'force':
+            angle=0
+            min_val = hertz_params.child('Min Force').value() / 1e9
+            max_val = hertz_params.child('Max Force').value() / 1e9
+            if max_val  == 0.0:
+                max_val = np.max(self.force)
+                hertz_params.child('Max Force').setValue(max_val * 1e9)
+        if self.min_val_line and self.max_val_line:
+            self.p2.removeItem(self.min_val_line)
+            self.p2.removeItem(self.max_val_line)
+        self.min_val_line = pg.InfiniteLine(pos=min_val, angle=angle, pen='y', movable=False, label='Min', labelOpts={'color':'y', 'position':0.7})
+        self.max_val_line = pg.InfiniteLine(pos=max_val, angle=angle, pen='y', movable=False, label='Max', labelOpts={'color':'y', 'position':0.7})
+        self.p2.addItem(self.min_val_line, ignoreBounds=True)
+        self.p2.addItem(self.max_val_line, ignoreBounds=True)
 
     def updateParams(self):
         # Updates params related to the current file
@@ -258,6 +287,13 @@ class HertzFitWidget(QtGui.QWidget):
             analysis_params.child('Deflection Sensitivity').setValue(self.current_file.file_metadata['original_deflection_sensitivity'])
         else:
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)
+        
+        hertz_params = self.params.child('Hertz Fit Params')
+        hertz_params.child('Fit Range Type').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Max Indentation').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Min Indentation').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Max Force').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Min Force').sigValueChanged.connect(self.update_fit_range)
     
     def close_dialog(self):
         self.dialog.close()

@@ -55,20 +55,25 @@ class HertzFitParams(pTypes.GroupParameter):
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
             {'name': 'PoC Window', 'type': 'int', 'value': 50},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['indentation', 'force']},
-            {'name': 'Min Indentation', 'type': 'float', 'value': 0},
-            {'name': 'Max Indentation', 'type': 'float', 'value': 100},
-            {'name': 'Min Force', 'type': 'float', 'value': 0},
-            {'name': 'Max Force', 'type': 'float', 'value': 100},
+            {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
+            {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
+            {'name': 'Min Force', 'type': 'float', 'value': None, 'units':'nN'},
+            {'name': 'Max Force', 'type': 'float', 'value': None, 'units':'nN'},
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
             {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},
+            {'name': 'Fit Line to non contact', 'type': 'bool', 'value':False},
             {'name': 'Init Slope', 'type': 'float', 'value': 0}
         ])
 
         self.range_mode = self.param('Fit Range Type')
         self.range_mode.sigValueChanged.connect(self.range_mode_changed)
 
+        self.fit_line = self.param('Fit Line to non contact')
+        self.fit_line.sigValueChanged.connect(self.fit_line_changed)
+
         self.range_mode_changed()
+        self.fit_line_changed()
         
     def range_mode_changed(self):
         if self.range_mode.value() == 'indentation':
@@ -82,6 +87,12 @@ class HertzFitParams(pTypes.GroupParameter):
             self.param('Max Indentation').show(False)
             self.param('Min Force').show(True)
             self.param('Max Force').show(True)
+    
+    def fit_line_changed(self):
+        if self.fit_line.value():
+            self.param('Init Slope').show(True)
+        else:
+            self.param('Init Slope').show(False)
 
 class TingFitParams(pTypes.GroupParameter):
     def __init__(self, **opts):

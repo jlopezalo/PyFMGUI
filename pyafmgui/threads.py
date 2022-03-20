@@ -68,6 +68,12 @@ class ProcessFilesThread(QtCore.QThread):
             self.d0 = hertz_params.child('Init d0').value() / 1e9 
             self.f0 = hertz_params.child('Init f0').value()
             self.slope = hertz_params.child('Init Slope').value()
+            self.fit_range_type = hertz_params.child('Fit Range Type').value()
+            self.max_ind = hertz_params.child('Max Indentation').value() / 1e9  
+            self.min_ind = hertz_params.child('Min Indentation').value() / 1e9 
+            self.max_force = hertz_params.child('Max Force').value() / 1e9 
+            self.min_force = hertz_params.child('Min Force').value() / 1e9 
+            self.fit_line = hertz_params.child('Fit Line to non contact').value()
         elif self.method == "TingFit":
             ting_params = self.params.child('Ting Fit Params')
             self.poisson = ting_params.child('Poisson Ratio').value()
@@ -102,8 +108,20 @@ class ProcessFilesThread(QtCore.QThread):
         poc = [rov_PoC[0], 0]
         indentation, force = get_force_vs_indentation_curve(zheight, deflection, poc, self.k)
         force = force - force[0]
+        contact_mask = indentation >= 0
+        ncont_ind = indentation[~contact_mask]
+        cont_ind = indentation[contact_mask]
+        ncont_force = force[~contact_mask]
+        cont_force = force[contact_mask]
+        if self.fit_range_type == 'indentation':
+            mask = (cont_ind >= self.min_ind) & (cont_ind <= self.max_ind)
+        elif self.fit_range_type == 'force':
+            mask = (cont_force >= self.min_force) & (cont_force <= self.max_force)
+        cont_ind, cont_force = cont_ind[mask], cont_force[mask]
+        indentation = np.r_[ncont_ind, cont_ind]
+        force = np.r_[ncont_force, cont_force]
         p0 = [self.d0, self.f0, self.slope, self.E0]
-        return HertzFit(indentation, force,  self.contact_model,  self.tip_param, p0,  self.poisson)
+        return HertzFit(indentation, force,  self.contact_model, self.tip_param, p0, self.poisson, self.fit_line)
     
     def do_ting_fit(self, file_data, curve_indx):
         curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)

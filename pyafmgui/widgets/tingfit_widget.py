@@ -238,7 +238,7 @@ class TingFitWidget(QtGui.QWidget):
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')
             self.p2legend.addItem(style, f'Hertz Red. Chi: {self.hertz_redchi:.3E}')
             self.p2legend.addItem(style, f'Ting E: {self.ting_E:.2f} Pa')
-            self.p2legend.addItem(style, f'Ting Fluid. Exp.: {self.ting_exp:.2f}')
+            self.p2legend.addItem(style, f'Ting Fluid. Exp.: {self.ting_exp:.3f}')
             self.p2legend.addItem(style, f'Ting d0: {self.ting_d0 + poc[0]:.3E} m')
             self.p2legend.addItem(style, f'Ting Red. Chi: {self.ting_redchi:.3E}')
         if self.residual is not None:

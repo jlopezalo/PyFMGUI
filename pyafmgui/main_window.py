@@ -5,6 +5,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from pyafmgui.threads import LoadFilesThread
 
 from pyafmgui.widgets.customdialog import CustomDialog
+from pyafmgui.widgets.exportdialog import ExportDialog
 from pyafmgui.widgets.hertzfit_widget import HertzFitWidget
 from pyafmgui.widgets.tingfit_widget import TingFitWidget
 from pyafmgui.widgets.piezochar_widget import PiezoCharWidget
@@ -20,7 +21,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.init_gui()
 		
 	def init_gui(self):
-		self.setWindowTitle("PyAFMRheo v.0.0.0")
+		self.setWindowTitle("PyAFMRheo v.0.0.1")
 
 		self.mdi = QtWidgets.QMdiArea()
 		self.setCentralWidget(self.mdi)
@@ -121,9 +122,8 @@ class MainWindow(QtWidgets.QMainWindow):
 				if valid_files != []:
 					self.load_files(valid_files)
 		if q.text() == "Export Results":
-			dirname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Save Directory')
-			if dirname != "" and dirname is not None:
-				self.session.export_results(dirname)
+			export_dialog = ExportDialog(self.session)
+			export_dialog.exec()
 		if q.text() == "Cascade":
 			self.mdi.cascadeSubWindows()
 		if q.text() == "Tiled":

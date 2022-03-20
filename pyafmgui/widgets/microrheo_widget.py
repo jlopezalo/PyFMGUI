@@ -10,7 +10,6 @@ from scipy.fft import fft, fftfreq
 import pyafmgui.const as cts
 from pyafmgui.threads import ProcessFilesThread
 from pyafmgui.helpers.curve_utils import *
-from pyafmgui.helpers.sineFit_utils import SineFunc
 from pyafmgui.widgets.customdialog import CustomDialog
 from pyafmrheo.utils.signal_processing import *
 
@@ -114,6 +113,7 @@ class MicrorheoWidget(QtGui.QWidget):
             methodkey = "Microrheo"
         else:
             methodkey = "MicrorheoSine"
+        self.session.microrheo_results = {}
         self.dialog.pbar_files.setRange(0, len(self.filedict)-1)
         self.thread = ProcessFilesThread(self.session, self.params, self.filedict, methodkey, self.dialog)
         self.thread._signal_id.connect(self.signal_accept2)
@@ -237,23 +237,71 @@ class MicrorheoWidget(QtGui.QWidget):
                         self.defl_results = curve_microrheo_result[4]
                     
         t0 = 0
+        t0_2 = 0
         n_segments = len(modulation_segs_data)
-        for i, seg_data in enumerate(modulation_segs_data):
-            time = seg_data['time']
-            plot_time = time + t0
-            deltat = time[1] - time[0]
-            nfft = len(seg_data['deflection'])
-            W = fftfreq(nfft, d=deltat)
-            fft_height = fft(seg_data['height'], nfft)
-            psd_height = fft_height * np.conj(fft_height) / nfft
-            fft_deflect = fft(seg_data['deflection'], nfft)
-            psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
-            L = np.arange(1, np.floor(nfft/2), dtype='int')
-            self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-            self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-            self.p1.plot(plot_time, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-            self.p2.plot(plot_time, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-            t0 = plot_time[-1]
+        if method == 'FFT':
+            for i, seg_data in enumerate(modulation_segs_data):
+                time = seg_data['time']
+                plot_time = time + t0
+                deltat = time[1] - time[0]
+                nfft = len(seg_data['deflection'])
+                W = fftfreq(nfft, d=deltat)
+                fft_height = fft(seg_data['height'], nfft)
+                psd_height = fft_height * np.conj(fft_height) / nfft
+                fft_deflect = fft(seg_data['deflection'], nfft)
+                psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
+                L = np.arange(1, np.floor(nfft/2), dtype='int')
+                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                self.p1.plot(plot_time, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                self.p2.plot(plot_time, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                t0 = plot_time[-1]
+        
+            self.p3.setLabel('left', 'zHeight PSD')
+            self.p3.setLabel('bottom', 'Frequency', 'Hz')
+            self.p3.setTitle("FFT")
+            self.p3.setLogMode(True, False)
+            self.p3.addLegend()
+
+            self.p4.setLabel('left', 'Deflection PSD')
+            self.p4.setLabel('bottom', 'Frequency', 'Hz')
+            self.p4.setTitle("FFT")
+            self.p4.setLogMode(True, False)
+            self.p4.addLegend()
+
+        elif method == 'Sine Fit':
+            for i, seg_data in enumerate(modulation_segs_data):
+                time = seg_data['time']
+                plot_time_1 = time + t0
+                deflection = seg_data['deflection']
+                zheight, deflection, time_2 =\
+                    detrend_rolling_average(seg_data['frequency'], seg_data['height'], deflection, time, 'zheight', 'deflection', [])
+                indentation, _ = get_force_vs_indentation_curve(zheight, deflection, [0,0], spring_k)
+                plot_time_2 = time_2 - time_2[0] + t0_2
+                self.p3.plot(plot_time_2 , indentation, pen='w')
+                self.p4.plot(plot_time_2, deflection, pen='w')
+                if self.ind_results is not None and self.defl_results is not None:
+                    idx = FindValueIndex(np.array(self.freqs), seg_data['frequency'])
+                    indentation_res = self.ind_results[idx].eval(time=time_2)
+                    deflection_res = self.defl_results[idx].eval(time=time_2)
+                    self.p3.plot(plot_time_2, indentation_res, pen='g')
+                    self.p4.plot(plot_time_2, deflection_res, pen='g')
+                self.p1.plot(plot_time_1, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                self.p2.plot(plot_time_1, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                t0 = plot_time_1[-1]
+                t0_2 = plot_time_2[-1]
+            
+            self.p3.setLabel('left', 'Indentation Detrended', 'm')
+            self.p3.setLabel('bottom', 'Time', 's')
+            self.p3.setTitle("Indentation Sine Fit")
+            self.p3.setLogMode(False, False)
+            self.p3.addLegend()
+
+            self.p4.setLabel('left', 'Deflection Detrended', 'm')
+            self.p4.setLabel('bottom', 'Time', 's')
+            self.p4.setTitle("Deflection Sine Fit")
+            self.p4.setLogMode(False, False)
+            self.p4.addLegend()
          
         if self.G_storage is not None and self.G_loss is not None:
             self.p5.plot(self.freqs, self.G_storage, pen='r', symbol='o', symbolBrush='r', name="G Storage")
@@ -272,18 +320,6 @@ class MicrorheoWidget(QtGui.QWidget):
         self.p2.setTitle("Deflection-Time")
         self.p2.addLegend()
         
-        self.p3.setLabel('left', 'zHeight PSD')
-        self.p3.setLabel('bottom', 'Frequency', 'Hz')
-        self.p3.setTitle("FFT")
-        self.p3.setLogMode(True, False)
-        self.p3.addLegend()
-
-        self.p4.setLabel('left', 'Deflection PSD')
-        self.p4.setLabel('bottom', 'Frequency', 'Hz')
-        self.p4.setTitle("FFT")
-        self.p4.setLogMode(True, False)
-        self.p4.addLegend()
-
         self.p5.setLabel('left', 'Complex Modulus', 'Pa')
         self.p5.setLabel('bottom', 'Frequency', 'Hz')
         self.p5.setTitle("Complex Modulus-Frequency")

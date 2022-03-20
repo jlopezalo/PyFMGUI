@@ -42,7 +42,7 @@ class Session:
         self.piezo_char_data = None
         self.piezo_char_file_path = None
     
-    def export_results(self, dirname):
+    def export_results(self, dirname, file_prefix):
         results = {
             'hertz_results': self.hert_fit_results,
             'ting_results': self.ting_fit_results,
@@ -109,4 +109,4 @@ class Session:
                             row_df['file_id'] = file_id
                             row_df['curve_indx'] = curve_indx
                             outputdf = outputdf.append(row_df, ignore_index=True)
-                outputdf.to_csv(os.path.join(dirname, result_type + '.csv'), index=False)
+                outputdf.to_csv(os.path.join(dirname, f'{file_prefix}_{result_type}.csv'), index=False)
