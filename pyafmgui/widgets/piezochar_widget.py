@@ -95,9 +95,10 @@ class PiezoCharWidget(QtGui.QWidget):
         self.thread._signal_id.connect(self.signal_accept2)
         self.thread._signal_file_progress.connect(self.signal_accept)
         self.thread._signal_curve_progress.connect(self.signal_accept3)
-        self.thread.start()
+        self.dialog.buttonBox.rejected.connect(self.close_dialog)
         self.thread.finished.connect(self.close_dialog)
         self.thread.finished.connect(self.updatePlots)
+        self.thread.start()
 
     def update(self):
         self.current_file = self.session.current_file
@@ -271,6 +272,8 @@ class PiezoCharWidget(QtGui.QWidget):
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)
     
     def close_dialog(self):
+        if self.thread.isRunning():
+            self.thread.exit()
         self.dialog.close()
     
     def signal_accept(self, msg):

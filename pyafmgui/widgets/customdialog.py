@@ -11,7 +11,6 @@ class CustomDialog(QtWidgets.QDialog):
         QBtn = QtWidgets.QDialogButtonBox.StandardButton.Cancel
 
         self.buttonBox = QtWidgets.QDialogButtonBox(QBtn)
-        self.buttonBox.rejected.connect(self.reject)
 
         self.layout = QtWidgets.QVBoxLayout()
         self.message = QtWidgets.QLabel()
