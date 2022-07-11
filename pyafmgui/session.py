@@ -5,7 +5,7 @@ import pandas as pd
 class Session:
     def __init__(self):
         self.loaded_files = {}
-        self.hert_fit_results = {}
+        self.hertz_fit_results = {}
         self.thermal_tune_results = {}
         self.ting_fit_results = {}
         self.piezo_char_results = {}
@@ -28,7 +28,7 @@ class Session:
     
     def remove_data_and_results(self):
         self.loaded_files = {}
-        self.hert_fit_results = {}
+        self.hertz_fit_results = {}
         self.thermal_tune_results = {}
         self.ting_fit_results = {}
         self.piezo_char_results = {}
@@ -44,7 +44,7 @@ class Session:
     
     def export_results(self, dirname, file_prefix):
         results = {
-            'hertz_results': self.hert_fit_results,
+            'hertz_results': self.hertz_fit_results,
             'ting_results': self.ting_fit_results,
             'piezochar_results': self.piezo_char_results,
             'vdrag_results': self.vdrag_results,

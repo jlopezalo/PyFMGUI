@@ -1,3 +1,5 @@
+import numpy as np
+
 from pyafmrheo.utils.force_curves import *
 
 def preprocess_curve(file_data, curve_idx, height_channel, deflection_sensitivity):

@@ -1,8 +1,3 @@
-from math import fabs
-from re import T
-from unicodedata import name
-import PyQt5
-from matplotlib.style import available
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 jpk_file_extensions = ('.jpk-force', '.jpk-force-map', '.jpk-qi-data')
@@ -147,8 +142,8 @@ general_params = {'name': 'General Options', 'type': 'group', 'children': [
     ]}
 
 plot_params = {'name': 'Display Options', 'type': 'group', 'children': [
-        {'name': 'Curve X axis', 'type': 'list', 'limits': ['height', 'time']},
-        {'name': 'Curve Y axis', 'type': 'list', 'limits': ['deflection', 'height']},
+        {'name': 'Curve X axis', 'type': 'list', 'limits': ['zheight', 'time']},
+        {'name': 'Curve Y axis', 'type': 'list', 'limits': ['vdeflection', 'zheight']},
         {'name': 'Map Data', 'type': 'list', 'limits': ['piezo height', 'Data Missing Check', 'Slope Check', 'Baseline Noise Check']}
     ]}
 

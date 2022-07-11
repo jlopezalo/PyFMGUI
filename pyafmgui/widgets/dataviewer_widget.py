@@ -1,5 +1,3 @@
-from cmath import pi
-from re import T
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -49,7 +47,7 @@ class DataViewerWidget(QtGui.QWidget):
         self.ROI.setPen("r", linewidht=2)
         self.ROI.setZValue(10)
 
-        self.correlogram = pg.ImageItem(lockAspect=True)
+        self.correlogram = pg.ImageItem(lockAspect=True, autoDownsample=False)
 
         self.plotItem.addItem(self.correlogram)    # display correlogram
 
@@ -99,7 +97,7 @@ class DataViewerWidget(QtGui.QWidget):
     def get_sumary_metadata():
         pass
     
-    def make_plot(self, curve_data, n_segments):
+    def make_plot(self, force_curve):
         self.p1.clear()
         self.p1.showGrid(x=True, y=True)
         self.p1.enableAutoRange()
@@ -107,27 +105,31 @@ class DataViewerWidget(QtGui.QWidget):
         xkey = self.curve_x.value()
         ykey = self.curve_y.value()
         t0 = 0
-        for i, (seg_id, segment_type, data) in enumerate(curve_data):
-            x = data[xkey]
+        fc_segments = force_curve.get_segments()
+        n_segments = len(fc_segments)
+        for i, (seg_id, segment) in enumerate(fc_segments):
+            x = getattr(segment, xkey)
             if xkey == "time":
                 x = x + t0
                 t0 = x[-1]
-            y = data[ykey]
-            self.p1.plot(x, y, pen=(i,n_segments), name=f"{segment_type} {seg_id}")
+            y = getattr(segment, ykey)
+            self.p1.plot(x, y, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
         self.p1.setLabel('left', ykey)
         self.p1.setLabel('bottom', xkey)
         self.p1.setTitle(f"{ykey}-{xkey}")
     
     def updateCurve(self):
         idx = self.session.current_curve_index
-        height_channel = self.session.current_file.file_metadata['height_channel_key']
-        n_segments = self.session.current_file.file_metadata['nbr_segments']
+        height_channel = self.session.current_file.filemetadata['height_channel_key']
         if self.session.global_involts is None:
-            deflection_sens = self.session.current_file.file_metadata['original_deflection_sensitivity']
+            deflection_sens = self.session.current_file.filemetadata['defl_sens_nmbyV']
         else:
             deflection_sens = self.session.global_involts
-        curve_data = preprocess_curve(self.session.current_file.data, idx, height_channel, deflection_sens)
-        self.make_plot(curve_data, n_segments)
+        force_curve = self.session.current_file.getcurve(idx)
+        force_curve.preprocess_force_curve(deflection_sens, height_channel)
+        if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
+            force_curve.shift_height()
+        self.make_plot(force_curve)
     
     def updatePlots(self, item=None):
         if item is not None:
@@ -143,7 +145,7 @@ class DataViewerWidget(QtGui.QWidget):
 
         self.session.current_file = self.session.loaded_files[file_id]
 
-        if self.session.current_file.file_type in ("jpk-force-map", "jpk-qi-data"):
+        if self.session.current_file.isFV:
             self.l.addItem(self.plotItem)
             self.plotItem.setTitle("piezo height")
             self.plotItem.setLabel('left', 'y pixels')
@@ -151,20 +153,20 @@ class DataViewerWidget(QtGui.QWidget):
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
             # create transform to center the corner element on the origin, for any assigned image:
-            self.correlogram.setImage(self.session.current_file.piezo_image)
-            self.bar.setLevels((self.session.current_file.piezo_image.min(), self.session.current_file.piezo_image.max()))
-            rows, cols = self.session.current_file.piezo_image.shape
+            self.correlogram.setImage(self.session.current_file.piezoimg)
+            self.bar.setLevels((self.session.current_file.piezoimg.min(), self.session.current_file.piezoimg.max()))
+            rows, cols = self.session.current_file.piezoimg.shape
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
             curve_coords = np.arange(cols*rows).reshape((cols, rows))
-            if self.session.current_file.file_type == "jpk-force-map":
+            if self.session.current_file.filemetadata['file_type'] == "jpk-force-map":
                 curve_coords = np.asarray([row[::(-1)**i] for i, row in enumerate(curve_coords)])
             self.session.map_coords = curve_coords
             self.l.ci.layout.setColumnStretchFactor(1, 2)
 
         self.l.addItem(self.p1)
 
-        self.metadata_tree.setData(self.session.current_file.file_metadata)
+        self.metadata_tree.setData(self.session.current_file.filemetadata)
         
         self.session.current_curve_index = 0
         self.ROI.setPos(0, 0)

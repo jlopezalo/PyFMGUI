@@ -1,4 +1,6 @@
 import sys
+import multiprocessing
+from platform import system, release
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
@@ -39,4 +41,12 @@ def main():
 	sys.exit(app.exec())
 	
 if __name__ == '__main__':
+	# If running macOS catalina use forkserver instead of fork for creating new processes.
+    # See https://bugs.python.org/issue33725
+    if system() == "Darwin" and "19.0" <= release()[:-2] < "20.0":
+        multiprocessing.set_start_method("forkserver")
+
+    # Add support for multiprocessing in frozen app
+    # See http://docs.python.org/3/library/multiprocessing.html
+    multiprocessing.freeze_support()
     main()

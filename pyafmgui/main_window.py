@@ -2,7 +2,7 @@ import glob
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from pyafmgui.threads import LoadFilesThread
+from pyafmgui.loadfilesthread import LoadFilesThread
 
 from pyafmgui.widgets.customdialog import CustomDialog
 from pyafmgui.widgets.exportdialog import ExportDialog
@@ -152,7 +152,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.dialog.pbar_files.setValue(int(msg))
 	
 	def signal_accept2(self, msg):
-		self.dialog.message.setText(msg)
+		self.dialog.label.setText(msg)
 	
 	def close_dialog(self):
 		self.dialog.close()

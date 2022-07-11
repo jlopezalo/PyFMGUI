@@ -7,9 +7,10 @@ from scipy.fft import fft, fftfreq
 import numpy as np
 
 import pyafmgui.const as cts
-from pyafmgui.threads import ProcessFilesThread
 from pyafmgui.helpers.curve_utils import *
-from pyafmgui.widgets.customdialog import CustomDialog
+
+from pyafmgui.compute import compute
+from pyafmgui.widgets.get_params import get_params
 
 class PiezoCharWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -84,21 +85,13 @@ class PiezoCharWidget(QtGui.QWidget):
     def do_hertzfit(self):
         if not self.current_file:
             return
-        self.dialog = CustomDialog("computing")
-        self.dialog.show()
         if self.params.child('General Options').child('Compute All Files').value():
             self.filedict = self.session.loaded_files
         else:
             self.filedict = {self.session.current_file.file_id:self.session.current_file}
-        self.dialog.pbar_files.setRange(0, len(self.filedict)-1)
-        self.thread = ProcessFilesThread(self.session, self.params, self.filedict, "PiezoChar", self.dialog)
-        self.thread._signal_id.connect(self.signal_accept2)
-        self.thread._signal_file_progress.connect(self.signal_accept)
-        self.thread._signal_curve_progress.connect(self.signal_accept3)
-        self.dialog.buttonBox.rejected.connect(self.close_dialog)
-        self.thread.finished.connect(self.close_dialog)
-        self.thread.finished.connect(self.updatePlots)
-        self.thread.start()
+        params = get_params(self.params, 'PiezoChar')
+        compute(self.session, params, self.filedict, 'PiezoChar')
+        self.updatePlots()
 
     def update(self):
         self.current_file = self.session.current_file
@@ -255,8 +248,6 @@ class PiezoCharWidget(QtGui.QWidget):
         self.l.nextRow()
         self.l.addItem(self.p5)
         self.l.addItem(self.p6)
-        
-
 
     def updateParams(self):
         # Updates params related to the current file
@@ -270,17 +261,3 @@ class PiezoCharWidget(QtGui.QWidget):
             analysis_params.child('Deflection Sensitivity').setValue(self.current_file.file_metadata['original_deflection_sensitivity'])
         else:
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)
-    
-    def close_dialog(self):
-        if self.thread.isRunning():
-            self.thread.exit()
-        self.dialog.close()
-    
-    def signal_accept(self, msg):
-        self.dialog.pbar_files.setValue(int(msg))
-        
-    def signal_accept2(self, msg):
-        self.dialog.message.setText(msg)
-    
-    def signal_accept3(self, msg):
-        self.dialog.pbar_curves.setValue(int(msg))

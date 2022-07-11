@@ -5,9 +5,11 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import numpy as np
 
 import pyafmgui.const as cts
-from pyafmgui.threads import ProcessFilesThread
 from pyafmgui.helpers.curve_utils import *
-from pyafmgui.widgets.customdialog import CustomDialog
+from pyafmgui.compute import compute
+from pyafmgui.widgets.get_params import get_params
+
+from pyafmrheo.utils.force_curves import get_poc_RoV_method
 
 class HertzFitWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -82,37 +84,29 @@ class HertzFitWidget(QtGui.QWidget):
     def do_hertzfit(self):
         if not self.current_file:
             return
-        self.dialog = CustomDialog("computing")
-        self.dialog.show()
         if self.params.child('General Options').child('Compute All Files').value():
             self.filedict = self.session.loaded_files
         else:
-            self.filedict = {self.session.current_file.file_id:self.session.current_file}
-        self.dialog.pbar_files.setRange(0, len(self.filedict)-1)
-        self.thread = ProcessFilesThread(self.session, self.params, self.filedict, "HertzFit", self.dialog)
-        self.thread._signal_id.connect(self.signal_accept2)
-        self.thread._signal_file_progress.connect(self.signal_accept)
-        self.thread._signal_curve_progress.connect(self.signal_accept3)
-        self.dialog.buttonBox.rejected.connect(self.close_dialog)
-        self.thread.finished.connect(self.close_dialog)
-        self.thread.finished.connect(self.updatePlots)
-        self.thread.start()
+            self.filedict = {self.session.current_file.filemetadata['file_id']:self.session.current_file}
+        
+        params = get_params(self.params, "HertzFit")
+        compute(self.session, params,  self.filedict, "HertzFit")
+        self.updatePlots()
 
     def update(self):
-        print(self.session.current_file)
         self.current_file = self.session.current_file
         self.updateParams()
         self.l2.clear()
-        if self.current_file.file_type in ("jpk-force-map", "jpk-qi-data"):
+        if self.current_file.isFV:
             self.l2.addItem(self.plotItem)
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
-            self.correlogram.setImage(self.current_file.piezo_image)
-            rows, cols = self.session.current_file.piezo_image.shape
+            self.correlogram.setImage(self.current_file.piezoimg)
+            rows, cols = self.session.current_file.piezoimg.shape
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
             curve_coords = np.arange(cols*rows).reshape((cols, rows))
-            if self.session.current_file.file_type == "jpk-force-map":
+            if self.current_file.filemetadata['file_type'] == "jpk-force-map":
                 curve_coords = np.asarray([row[::(-1)**i] for i, row in enumerate(curve_coords)])
             self.session.map_coords = curve_coords
         self.session.current_curve_index = 0
@@ -127,7 +121,7 @@ class HertzFitWidget(QtGui.QWidget):
     
     def updateCombo(self):
         self.combobox.addItems(self.session.loaded_files.keys())
-        index = self.combobox.findText(self.current_file.file_id, QtCore.Qt.MatchFlag.MatchContains)
+        index = self.combobox.findText(self.current_file.filemetadata['file_id'], QtCore.Qt.MatchFlag.MatchContains)
         if index >= 0:
             self.combobox.setCurrentIndex(index)
         self.update()
@@ -150,10 +144,8 @@ class HertzFitWidget(QtGui.QWidget):
         pass
 
     def updatePlots(self):
-
         if not self.current_file:
             return
-
         self.l.clear()
         self.p1.clear()
         self.p2.clear()
@@ -167,8 +159,8 @@ class HertzFitWidget(QtGui.QWidget):
         self.residual = None
 
         analysis_params = self.params.child('Analysis Params')
-        current_file_id = self.current_file.file_id
-        current_file_data = self.current_file.data
+        current_file_id = self.current_file.filemetadata['file_id']
+        current_file = self.current_file
         current_curve_indx = self.session.current_curve_index
         height_channel = analysis_params.child('Height Channel').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
@@ -177,39 +169,52 @@ class HertzFitWidget(QtGui.QWidget):
         hertz_params = self.params.child('Hertz Fit Params')
         poc_win = hertz_params.child('PoC Window').value()
 
-        curve_data = preprocess_curve(current_file_data, current_curve_indx, height_channel, deflection_sens)
+        force_curve = current_file.getcurve(current_curve_indx)
+        force_curve.preprocess_force_curve(deflection_sens, height_channel)
 
-        file_hertz_result = self.session.hert_fit_results.get(current_file_id, None)
+        if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
+            force_curve.shift_height()
+
+        file_hertz_result = self.session.hertz_fit_results.get(current_file_id, None)
 
         if file_hertz_result:
             for curve_indx, curve_hertz_result in file_hertz_result:
                 if curve_hertz_result is None:
                     continue
                 if curve_indx == self.session.current_curve_index:
-                    self.hertz_E = curve_hertz_result.best_values['E0']
-                    self.hertz_d0 = curve_hertz_result.best_values['delta0']
+                    self.hertz_E = curve_hertz_result.E0
+                    self.hertz_d0 = curve_hertz_result.delta0
                     self.hertz_redchi = curve_hertz_result.redchi
                     self.fit_data = curve_hertz_result
-                    # self.residual = curve_hertz_result.residual
 
-        ext_data = curve_data[0][2]
-        ret_data = curve_data[-1][2]
+        ext_data = force_curve.extend_segments[0][1]
+        ret_data = force_curve.retract_segments[-1][1]
 
-        self.p3.plot(ext_data['height'], ext_data['deflection'])
-        self.p3.plot(ret_data['height'], ret_data['deflection'])
+        self.p3.plot(ext_data.zheight, ext_data.vdeflection)
+        self.p3.plot(ret_data.zheight, ret_data.vdeflection)
 
         if curve_seg == 'extend':
-            zheight  = ext_data['height']
-            vdeflect = ext_data['deflection']
+            zheight  = ext_data.zheight
+            vdeflect = ext_data.vdeflection
             
         else:
-            zheight  = ret_data['height'][::-1]
-            vdeflect = ret_data['deflection'][::-1]
+            zheight  = ret_data.zheight[::-1]
+            vdeflect = ret_data.vdeflection[::-1]
         
         rov_PoC = get_poc_RoV_method(zheight, vdeflect, win_size=poc_win)
         poc = [rov_PoC[0], 0]
-        self.indentation, self.force = get_force_vs_indentation_curve(zheight, vdeflect, poc, spring_k)
-        self.force = self.force - self.force[0]
+        force_curve.get_force_vs_indentation(poc, spring_k)
+
+        if curve_seg == 'extend':
+            self.indentation  = ext_data.indentation
+            self.force = ext_data.force
+            self.force = self.force - self.force[0]
+            
+        else:
+            self.indentation  = ret_data.indentation
+            self.force = ret_data.force
+            self.force = self.force - self.force[-1]
+
         self.p1.plot(self.indentation, self.force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
@@ -222,13 +227,13 @@ class HertzFitWidget(QtGui.QWidget):
  
         if self.fit_data is not None:
             x = self.indentation
-            self.p2.plot(x - self.hertz_d0, self.fit_data.eval(indentation=x), pen ='g', name='Fit')
+            y = self.fit_data.eval(x)
+            self.p2.plot(x - self.hertz_d0, y, pen ='g', name='Fit')
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')
             self.p2legend.addItem(style, f'Red. Chi: {self.hertz_redchi:.3E}')
-        if self.residual is not None:
-            res = self.p4.plot(self.indentation - self.hertz_d0, self.residual, pen=None, symbol='o')
+            res = self.p4.plot(x - self.hertz_d0, self.fit_data.get_residuals(x, self.force), pen=None, symbol='o')
             res.setSymbolSize(5)
         
         self.p1.setLabel('left', 'Force', 'N')
@@ -279,13 +284,13 @@ class HertzFitWidget(QtGui.QWidget):
     def updateParams(self):
         # Updates params related to the current file
         analysis_params = self.params.child('Analysis Params')
-        analysis_params.child('Height Channel').setValue(self.current_file.file_metadata['height_channel_key'])
+        analysis_params.child('Height Channel').setValue(self.current_file.filemetadata['height_channel_key'])
         if self.session.global_k is None:
-            analysis_params.child('Spring Constant').setValue(self.current_file.file_metadata['original_spring_constant'])
+            analysis_params.child('Spring Constant').setValue(self.current_file.filemetadata['spring_const_Nbym'])
         else:
             analysis_params.child('Spring Constant').setValue(self.session.global_k)
         if self.session.global_involts is None:
-            analysis_params.child('Deflection Sensitivity').setValue(self.current_file.file_metadata['original_deflection_sensitivity'])
+            analysis_params.child('Deflection Sensitivity').setValue(self.current_file.filemetadata['defl_sens_nmbyV'])
         else:
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)
         
@@ -295,17 +300,3 @@ class HertzFitWidget(QtGui.QWidget):
         hertz_params.child('Min Indentation').sigValueChanged.connect(self.update_fit_range)
         hertz_params.child('Max Force').sigValueChanged.connect(self.update_fit_range)
         hertz_params.child('Min Force').sigValueChanged.connect(self.update_fit_range)
-    
-    def close_dialog(self):
-        if self.thread.isRunning():
-            self.thread.exit()
-        self.dialog.close()
-    
-    def signal_accept(self, msg):
-        self.dialog.pbar_files.setValue(int(msg))
-        
-    def signal_accept2(self, msg):
-        self.dialog.message.setText(msg)
-    
-    def signal_accept3(self, msg):
-        self.dialog.pbar_curves.setValue(int(msg))
