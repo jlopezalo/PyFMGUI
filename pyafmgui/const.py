@@ -77,7 +77,7 @@ class HertzFitParams(pTypes.GroupParameter):
             self.param('Max Indentation').show(False)
             self.param('Min Force').show(False)
             self.param('Max Force').show(False)
-            
+
         elif self.range_mode.value() == 'indentation':
             self.param('Min Indentation').show(True)
             self.param('Max Indentation').show(True)
@@ -105,7 +105,7 @@ class TingFitParams(pTypes.GroupParameter):
             {'name': 'Correct Viscous Drag', 'type': 'bool', 'value':False},
             {'name': 'Poly. Order', 'type': 'int', 'value':2},
             {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
-            {'name': 'Model Type', 'type': 'list', 'limits': ['numerical', 'analytical']},
+            {'name': 'Model Type', 'type': 'list', 'limits': ['analytical', 'numerical']},
             {'name': 't0', 'type': 'int', 'value': 1, 'units':'s'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
             {'name': 'Init Slope', 'type': 'float', 'value': 0},

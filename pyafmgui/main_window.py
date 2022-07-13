@@ -123,7 +123,7 @@ class MainWindow(QtWidgets.QMainWindow):
 					self.load_files(valid_files)
 		if q.text() == "Export Results":
 			export_dialog = ExportDialog(self.session)
-			export_dialog.exec()
+			self.add_subwindow(export_dialog, 'Export Data')
 		if q.text() == "Cascade":
 			self.mdi.cascadeSubWindows()
 		if q.text() == "Tiled":
