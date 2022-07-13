@@ -9,7 +9,6 @@ import pandas as pd
 from scipy.fft import fft, fftfreq
 
 import pyafmgui.const as cts
-from pyafmgui.helpers.curve_utils import *
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
@@ -106,7 +105,7 @@ class VDragWidget(QtGui.QWidget):
         if self.params.child('General Options').child('Compute All Files').value():
             self.filedict = self.session.loaded_files
         else:
-            self.filedict = {self.session.current_file.file_id:self.session.current_file}
+            self.filedict = {self.session.current_file.filemetadata['file_id']:self.session.current_file}
         params = get_params(self.params, "HertzFit")
         compute(self.session, params,  self.filedict, "HertzFit")
         self.updatePlots()
@@ -129,16 +128,16 @@ class VDragWidget(QtGui.QWidget):
         self.current_file = self.session.current_file
         self.updateParams()
         self.l2.clear()
-        if self.current_file.file_type in ("jpk-force-map", "jpk-qi-data"):
+        if self.current_file.isFV:
             self.l2.addItem(self.plotItem)
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
-            self.correlogram.setImage(self.current_file.piezo_image)
-            rows, cols = self.session.current_file.piezo_image.shape
+            self.correlogram.setImage(self.current_file.piezoimg)
+            rows, cols = self.session.current_file.piezoimg.shape
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
             curve_coords = np.arange(cols*rows).reshape((cols, rows))
-            if self.session.current_file.file_type == "jpk-force-map":
+            if self.session.current_file.filemetadata['file_type'] == "jpk-force-map":
                 curve_coords = np.asarray([row[::(-1)**i] for i, row in enumerate(curve_coords)])
             self.session.map_coords = curve_coords
         self.session.current_curve_index = 0
@@ -152,7 +151,7 @@ class VDragWidget(QtGui.QWidget):
     
     def updateCombo(self):
         self.combobox.addItems(self.session.loaded_files.keys())
-        index = self.combobox.findText(self.current_file.file_id, QtCore.Qt.MatchFlag.MatchContains)
+        index = self.combobox.findText(self.current_file.filemetadata['file_id'], QtCore.Qt.MatchFlag.MatchContains)
         if index >= 0:
             self.combobox.setCurrentIndex(index)
         self.update()
@@ -191,7 +190,7 @@ class VDragWidget(QtGui.QWidget):
         self.Hd = None
 
         analysis_params = self.params.child('Analysis Params')
-        current_file_id = self.current_file.file_id
+        current_file_id = self.current_file.filemetadata['file_id']
         current_file_data = self.current_file.data
         current_curve_indx = self.session.current_curve_index
         height_channel = analysis_params.child('Height Channel').value()
@@ -286,12 +285,12 @@ class VDragWidget(QtGui.QWidget):
     def updateParams(self):
         # Updates params related to the current file
         analysis_params = self.params.child('Analysis Params')
-        analysis_params.child('Height Channel').setValue(self.current_file.file_metadata['height_channel_key'])
+        analysis_params.child('Height Channel').setValue(self.current_file.filemetadata['height_channel_key'])
         if self.session.global_k is None:
-            analysis_params.child('Spring Constant').setValue(self.current_file.file_metadata['original_spring_constant'])
+            analysis_params.child('Spring Constant').setValue(self.current_file.filemetadata['spring_const_Nbym'])
         else:
             analysis_params.child('Spring Constant').setValue(self.session.global_k)
         if self.session.global_involts is None:
-            analysis_params.child('Deflection Sensitivity').setValue(self.current_file.file_metadata['original_deflection_sensitivity'])
+            analysis_params.child('Deflection Sensitivity').setValue(self.current_file.filemetadata['defl_sens_nmbyV'])
         else:
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)

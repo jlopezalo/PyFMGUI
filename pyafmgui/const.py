@@ -49,11 +49,12 @@ class HertzFitParams(pTypes.GroupParameter):
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
             {'name': 'PoC Window', 'type': 'int', 'value': 50},
-            {'name': 'Fit Range Type', 'type': 'list', 'limits': ['indentation', 'force']},
+            {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
             {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Min Force', 'type': 'float', 'value': None, 'units':'nN'},
             {'name': 'Max Force', 'type': 'float', 'value': None, 'units':'nN'},
+            {'name': 'Auto Init E0', 'type': 'bool', 'value':True},
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
             {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},
@@ -71,7 +72,13 @@ class HertzFitParams(pTypes.GroupParameter):
         self.fit_line_changed()
         
     def range_mode_changed(self):
-        if self.range_mode.value() == 'indentation':
+        if self.range_mode.value() == 'full':
+            self.param('Min Indentation').show(False)
+            self.param('Max Indentation').show(False)
+            self.param('Min Force').show(False)
+            self.param('Max Force').show(False)
+            
+        elif self.range_mode.value() == 'indentation':
             self.param('Min Indentation').show(True)
             self.param('Max Indentation').show(True)
             self.param('Min Force').show(False)
@@ -102,6 +109,7 @@ class TingFitParams(pTypes.GroupParameter):
             {'name': 't0', 'type': 'int', 'value': 1, 'units':'s'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
             {'name': 'Init Slope', 'type': 'float', 'value': 0},
+            {'name': 'Auto Init E0', 'type': 'bool', 'value':True},
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init tc', 'type': 'float', 'value': 0, 'units':'s'},
             {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},

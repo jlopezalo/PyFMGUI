@@ -24,15 +24,17 @@ def do_hertz_fit(fdc, param_dict):
     cont_force = force[contact_mask]
     if param_dict['fit_range_type'] == 'indentation':
         mask = (cont_ind >= param_dict['min_ind']) & (cont_ind <= param_dict['max_ind'])
+        cont_ind, cont_force = cont_ind[mask], cont_force[mask]
     elif param_dict['fit_range_type'] == 'force':
         mask = (cont_force >= param_dict['min_force']) & (cont_force <= param_dict['max_force'])
-    cont_ind, cont_force = cont_ind[mask], cont_force[mask]
+        cont_ind, cont_force = cont_ind[mask], cont_force[mask]
     indentation = np.r_[ncont_ind, cont_ind]
     force = np.r_[ncont_force, cont_force]
     hertz_model = HertzModel(param_dict['contact_model'], param_dict['tip_param'])
     hertz_model.fit_hline_flag = param_dict['fit_line']
     hertz_model.d0_init = param_dict['d0']
-    hertz_model.E0_init = param_dict['E0']
+    if not param_dict['auto_init_E0']:
+        hertz_model.E0_init = param_dict['E0']
     hertz_model.f0_init = param_dict['f0']
     if param_dict['fit_line']:
         hertz_model.slope_init = param_dict['slope']

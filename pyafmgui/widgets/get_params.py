@@ -22,6 +22,7 @@ def get_params(params, method):
         hertz_params = params.child('Hertz Fit Params')
         param_dict['poisson'] = hertz_params.child('Poisson Ratio').value()
         param_dict['poc_win'] = hertz_params.child('PoC Window').value()
+        param_dict['auto_init_E0'] = hertz_params.child('Auto Init E0').value()
         param_dict['E0'] = hertz_params.child('Init E0').value()
         param_dict['d0'] = hertz_params.child('Init d0').value() / 1e9 
         param_dict['f0'] = hertz_params.child('Init f0').value()
@@ -42,6 +43,7 @@ def get_params(params, method):
         param_dict['t0'] = ting_params.child('t0').value()
         param_dict['d0'] = ting_params.child('Init d0').value() / 1e9 
         param_dict['slope'] = ting_params.child('Init Slope').value()
+        param_dict['auto_init_E0'] = hertz_params.child('Auto Init E0').value()
         param_dict['E0'] = ting_params.child('Init E0').value()
         param_dict['tc'] = ting_params.child('Init tc').value()
         param_dict['fluid_exp'] = ting_params.child('Init Fluid. Exp.').value()

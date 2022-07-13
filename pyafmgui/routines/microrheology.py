@@ -4,8 +4,18 @@ from pyafmrheo.utils.force_curves import *
 from pyafmrheo.utils.signal_processing import *
 from pyafmrheo.models.rheology import ComputePiezoLag, ComputeBh, ComputeComplexModulus
 
-from pyafmgui.helpers.curve_utils import *
 from pyafmgui.helpers.sineFit_utils import *
+
+def get_retract_ramp_sizes(file_data, curve_idx):
+    x0 = 0
+    distances = []
+    force_curve = file_data[curve_idx]
+    sorted_ret_segments = sorted(force_curve.retract_segments, key=lambda x: int(x[0]))
+    for _, first_ret_seg in sorted_ret_segments[:-1]:
+        distance_from_sample = -1 * first_ret_seg.segment_metadata['ramp_size'] + x0 # Negative
+        distances.append(distance_from_sample * 1e-9)
+        x0 = distance_from_sample
+    return distances
 
 def do_piezo_char(self, file_data, curve_indx):
     curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)

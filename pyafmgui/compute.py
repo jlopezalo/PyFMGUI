@@ -1,13 +1,13 @@
 import PyQt5
 import pyqtgraph.multiprocess as mp
 
+import platform, multiprocessing
+
 import pyafmgui.const as cts
-from pyafmgui.helpers.curve_utils import *
 from pyafmgui.routines.hertzfit import do_hertz_fit
 from pyafmgui.routines.tingfit import do_ting_fit
 from pyafmgui.routines.microrheology import *
 import traceback
-
 
 def analyze_fdc(session, param_dict, fdc):
     # Do fdc preprocessing
@@ -21,9 +21,8 @@ def analyze_fdc(session, param_dict, fdc):
         elif param_dict['method'] == "VDrag": return do_vdrag_char(fdc, param_dict)
         elif param_dict['method'] == "Microrheo": return do_microrheo(fdc, param_dict)
         elif param_dict['method'] == "MicrorheoSine": return do_microrheo_sine(fdc, param_dict)
-    except:
+    except Exception:
         traceback.print_exc()
-        return None
 
 def clear_file_results(session, method, file_id):
     if file_id in session.hertz_fit_results and method == "HertzFit":
@@ -58,10 +57,16 @@ def compute(session, params, filedict, method):
             # Define all curve indices
             curve_indices = list(range(nb_curves))
             # Process all curves in paralel
+            if platform.system() == "Darwin":
+                try:
+                    multiprocessing.set_start_method('spawn')
+                except RuntimeError:
+                    pass
             with mp.Parallelize(tasks=curve_indices, results=file_results, progressDialog=f'Processing File: {file_id}') as tasker:
                 for idx in tasker:
                     fdc = file.getcurve(idx)
                     tasker.results.append((idx, analyze_fdc(session, params, fdc)))
+                
         # Save results in the current session
         if params['method']  == "HertzFit":
             session.hertz_fit_results[file_id] = file_results

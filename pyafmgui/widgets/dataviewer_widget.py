@@ -5,7 +5,6 @@ import numpy as np
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 import pyafmgui.const as cts
-from pyafmgui.helpers.curve_utils import *
 
 class DataViewerWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):

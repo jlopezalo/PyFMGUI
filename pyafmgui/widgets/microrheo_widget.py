@@ -111,7 +111,7 @@ class MicrorheoWidget(QtGui.QWidget):
         if self.params.child('General Options').child('Compute All Files').value():
             self.filedict = self.session.loaded_files
         else:
-            self.filedict = {self.session.current_file.file_id:self.session.current_file}
+            self.filedict = {self.session.current_file.filemetadata['file_id']:self.session.current_file}
         if self.params.child('Analysis Params').child('Method').value() == "FFT":
             methodkey = "Microrheo"
         else:
@@ -139,16 +139,16 @@ class MicrorheoWidget(QtGui.QWidget):
         self.current_file = self.session.current_file
         self.updateParams()
         self.l2.clear()
-        if self.current_file.file_type in ("jpk-force-map", "jpk-qi-data"):
+        if self.current_file.isFV:
             self.l2.addItem(self.plotItem)
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
-            self.correlogram.setImage(self.current_file.piezo_image)
-            rows, cols = self.session.current_file.piezo_image.shape
+            self.correlogram.setImage(self.current_file.piezoimg)
+            rows, cols = self.session.current_file.piezoimg.shape
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
             curve_coords = np.arange(cols*rows).reshape((cols, rows))
-            if self.session.current_file.file_type == "jpk-force-map":
+            if self.session.current_file.filemetadata['file_type'] == "jpk-force-map":
                 curve_coords = np.asarray([row[::(-1)**i] for i, row in enumerate(curve_coords)])
             self.session.map_coords = curve_coords
         self.session.current_curve_index = 0
@@ -162,7 +162,7 @@ class MicrorheoWidget(QtGui.QWidget):
     
     def updateCombo(self):
         self.combobox.addItems(self.session.loaded_files.keys())
-        index = self.combobox.findText(self.current_file.file_id, QtCore.Qt.MatchFlag.MatchContains)
+        index = self.combobox.findText(self.current_file.filemetadata['file_id'], QtCore.Qt.MatchFlag.MatchContains)
         if index >= 0:
             self.combobox.setCurrentIndex(index)
         self.update()
@@ -207,19 +207,20 @@ class MicrorheoWidget(QtGui.QWidget):
         self.defl_results = None
 
         analysis_params = self.params.child('Analysis Params')
-        current_file_id = self.current_file.file_id
-        current_file_data = self.current_file.data
+        current_file_id = self.current_file.filemetadata['file_id']
+        current_file = self.current_file
         current_curve_indx = self.session.current_curve_index
         height_channel = analysis_params.child('Height Channel').value()
         spring_k = analysis_params.child('Spring Constant').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         method = analysis_params.child('Method').value()
 
-        curve_data = preprocess_curve(current_file_data, current_curve_indx, height_channel, deflection_sens)
+        force_curve = current_file.getcurve(current_curve_indx)
+        force_curve.preprocess_force_curve(deflection_sens, height_channel)
 
-        modulation_segs_data = [seg_data for _, seg_type, seg_data in curve_data if seg_type == 'modulation']
+        modulation_segs = force_curve.modulation_segments
 
-        if modulation_segs_data == []:
+        if modulation_segs == []:
             return
 
         microrheo_result = self.session.microrheo_results.get(current_file_id, None)
@@ -238,23 +239,23 @@ class MicrorheoWidget(QtGui.QWidget):
                     
         t0 = 0
         t0_2 = 0
-        n_segments = len(modulation_segs_data)
+        n_segments = len(modulation_segs)
         if method == 'FFT':
-            for i, seg_data in enumerate(modulation_segs_data):
-                time = seg_data['time']
+            for i, segment in enumerate(modulation_segs):
+                time = segment.time
                 plot_time = time + t0
                 deltat = time[1] - time[0]
-                nfft = len(seg_data['deflection'])
+                nfft = len(segment.vdeflection)
                 W = fftfreq(nfft, d=deltat)
-                fft_height = fft(seg_data['height'], nfft)
+                fft_height = fft(segment.zheight, nfft)
                 psd_height = fft_height * np.conj(fft_height) / nfft
-                fft_deflect = fft(seg_data['deflection'], nfft)
+                fft_deflect = fft(segment.vdeflection, nfft)
                 psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
                 L = np.arange(1, np.floor(nfft/2), dtype='int')
-                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-                self.p1.plot(plot_time, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-                self.p2.plot(plot_time, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
+                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
+                self.p1.plot(plot_time, seg_data.zheight, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
+                self.p2.plot(plot_time, seg_data.vdeflection, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
                 t0 = plot_time[-1]
         
             self.p3.setLabel('left', 'zHeight PSD')
@@ -270,24 +271,24 @@ class MicrorheoWidget(QtGui.QWidget):
             self.p4.addLegend()
 
         elif method == 'Sine Fit':
-            for i, seg_data in enumerate(modulation_segs_data):
-                time = seg_data['time']
+            for i, segment in enumerate(modulation_segs):
+                freq = segment.segment_metadata['frequency']
+                time = segment.time
                 plot_time_1 = time + t0
-                deflection = seg_data['deflection']
-                zheight, deflection, time_2 =\
-                    detrend_rolling_average(seg_data['frequency'], seg_data['height'], deflection, time, 'zheight', 'deflection', [])
-                indentation, _ = get_force_vs_indentation_curve(zheight, deflection, [0,0], spring_k)
+                segment.zheight, segment.vdeflection, time_2 =\
+                    detrend_rolling_average(freq, segment.zheight, segment.vdeflection, time, 'zheight', 'deflection', [])
+                segment.get_force_vs_indentation([0,0], spring_k)
                 plot_time_2 = time_2 - time_2[0] + t0_2
-                self.p3.plot(plot_time_2 , indentation, pen='w')
-                self.p4.plot(plot_time_2, deflection, pen='w')
+                self.p3.plot(plot_time_2 , segment.indentation, pen='w')
+                self.p4.plot(plot_time_2, segment.vdeflection, pen='w')
                 if self.ind_results is not None and self.defl_results is not None:
-                    idx = FindValueIndex(np.array(self.freqs), seg_data['frequency'])
+                    idx = int((np.abs(np.array(self.freqs) - freq)).argmin())
                     indentation_res = self.ind_results[idx].eval(time=time_2)
                     deflection_res = self.defl_results[idx].eval(time=time_2)
                     self.p3.plot(plot_time_2, indentation_res, pen='g')
                     self.p4.plot(plot_time_2, deflection_res, pen='g')
-                self.p1.plot(plot_time_1, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-                self.p2.plot(plot_time_1, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                self.p1.plot(plot_time_1, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p2.plot(plot_time_1, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")
                 t0 = plot_time_1[-1]
                 t0_2 = plot_time_2[-1]
 
@@ -348,12 +349,12 @@ class MicrorheoWidget(QtGui.QWidget):
     def updateParams(self):
         # Updates params related to the current file
         analysis_params = self.params.child('Analysis Params')
-        analysis_params.child('Height Channel').setValue(self.current_file.file_metadata['height_channel_key'])
+        analysis_params.child('Height Channel').setValue(self.current_file.filemetadata['height_channel_key'])
         if self.session.global_k is None:
-            analysis_params.child('Spring Constant').setValue(self.current_file.file_metadata['original_spring_constant'])
+            analysis_params.child('Spring Constant').setValue(self.current_file.filemetadata['spring_const_Nbym'])
         else:
             analysis_params.child('Spring Constant').setValue(self.session.global_k)
         if self.session.global_involts is None:
-            analysis_params.child('Deflection Sensitivity').setValue(self.current_file.file_metadata['original_deflection_sensitivity'])
+            analysis_params.child('Deflection Sensitivity').setValue(self.current_file.filemetadata['defl_sens_nmbyV'])
         else:
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)

@@ -98,3 +98,6 @@ def SaderGCI_CalculateAndUploadK( UserName, Password, LeverNumber, Frequency, QF
     doc = etree.fromstring(r.content)
     if (doc.find('./status/code').text == 'OK'):
         print ("Sader GCI Spring Constant = "+doc.find('./cantilever/k_sader').text+', 95% C.I. Error = '+doc.find('./cantilever/percent').text+'% from '+doc.find('./cantilever/samples').text+' samples.')
+
+if __name__ == '__main__':
+    SaderGCI_GetLeverList('jlopezal', 'jf3XBhFS')

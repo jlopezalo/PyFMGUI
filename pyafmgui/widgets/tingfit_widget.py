@@ -5,7 +5,6 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import numpy as np
 
 import pyafmgui.const as cts
-from pyafmgui.helpers.curve_utils import *
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
@@ -165,12 +164,14 @@ class TingFitWidget(QtGui.QWidget):
         height_channel = analysis_params.child('Height Channel').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         spring_k = analysis_params.child('Spring Constant').value()
-        hertz_params = self.params.child('Ting Fit Params')
-        poc_win = hertz_params.child('PoC Window').value()
-        vdragcorr = hertz_params.child('Correct Viscous Drag').value()
-        polyordr = hertz_params.child('Poly. Order').value()
-        rampspeed = hertz_params.child('Ramp Speed').value() / 1e6
-        contact_offset = hertz_params.child('Contact Offset').value() / 1e6
+        ting_params = self.params.child('Ting Fit Params')
+        poc_win = ting_params.child('PoC Window').value()
+        vdragcorr = ting_params.child('Correct Viscous Drag').value()
+        polyordr = ting_params.child('Poly. Order').value()
+        rampspeed = ting_params.child('Ramp Speed').value() / 1e6
+        contact_offset = ting_params.child('Contact Offset').value() / 1e6
+        t0 = ting_params.child('t0').value()
+        smooth_w = ting_params.child('Smoothing Window').value()
 
         force_curve = current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
@@ -181,9 +182,11 @@ class TingFitWidget(QtGui.QWidget):
         file_ting_result = self.session.ting_fit_results.get(current_file_id, None)
 
         if file_ting_result:
-            for curve_indx, (curve_ting_result, curve_hertz_result) in file_ting_result:
-                if curve_hertz_result is None or curve_ting_result is None:
+            for curve_indx, result in file_ting_result:
+                if result is None:
                     continue
+                else:
+                    curve_ting_result, curve_hertz_result = result
                 if curve_indx == self.session.current_curve_index:
                     self.ting_E = curve_ting_result.E0
                     self.ting_exp = curve_ting_result.betaE
@@ -192,7 +195,7 @@ class TingFitWidget(QtGui.QWidget):
                     self.hertz_E = curve_hertz_result.E0
                     self.hertz_d0 = curve_hertz_result.delta0
                     self.hertz_redchi = curve_hertz_result.redchi
-                    self.fit_data = curve_hertz_result
+                    self.fit_data = curve_ting_result
 
         ext_data = force_curve.extend_segments[0][1]
         ret_data = force_curve.retract_segments[-1][1]
@@ -216,20 +219,22 @@ class TingFitWidget(QtGui.QWidget):
         self.p1.plot(ret_data.indentation, ret_data.force)
         indentation = np.r_[ext_data.indentation, ret_data.indentation]
         force = np.r_[ext_data.force, ret_data.force]
-        time = np.r_[ext_data.time, ret_data.time]
+        t0 = ext_data.time[-1]
+        time = np.r_[ext_data.time, ret_data.time + t0]
         fit_mask = indentation > (-1 * contact_offset)
         ind_fit = indentation[fit_mask] 
         force_fit = force[fit_mask]
         force_fit = force_fit - force_fit[0]
         time_fit = time[fit_mask]
         time_fit = time_fit - time_fit[0]
+        idx_tm = np.argmax(force_fit)
         if self.ting_tc:
-            ting_d0_idx = FindValueIndex(time_fit, self.ting_tc)
+            ting_d0_idx = int((np.abs(np.array(time_fit) - self.ting_tc)).argmin())
             self.ting_d0 = ind_fit[ting_d0_idx]
         self.p2.plot(ind_fit - self.ting_d0, force_fit)
 
         if self.fit_data is not None:
-            self.p2.plot(ind_fit - self.ting_d0, self.fit_data, pen ='g', name='Fit')
+            self.p2.plot(ind_fit - self.ting_d0, self.fit_data.eval(time_fit, force_fit, ind_fit, t0=t0, idx_tm=idx_tm, smooth_w=smooth_w), pen ='g', name='Fit')
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')
@@ -238,8 +243,7 @@ class TingFitWidget(QtGui.QWidget):
             self.p2legend.addItem(style, f'Ting Fluid. Exp.: {self.ting_exp:.3f}')
             self.p2legend.addItem(style, f'Ting d0: {self.ting_d0 + poc[0]:.3E} m')
             self.p2legend.addItem(style, f'Ting Red. Chi: {self.ting_redchi:.3E}')
-        if self.residual is not None:
-            res = self.p4.plot(ind_fit - self.ting_d0, self.residual, pen=None, symbol='o')
+            res = self.p4.plot(ind_fit - self.ting_d0, self.fit_data.get_residuals(time_fit, force_fit, ind_fit, t0=t0, idx_tm=idx_tm, smooth_w=smooth_w), pen=None, symbol='o')
             res.setSymbolSize(5)
         
         self.p1.setLabel('left', 'Force', 'N')

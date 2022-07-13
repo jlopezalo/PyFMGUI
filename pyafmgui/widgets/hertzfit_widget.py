@@ -259,11 +259,17 @@ class HertzFitWidget(QtGui.QWidget):
     def update_fit_range(self):
         hertz_params = self.params.child('Hertz Fit Params')
         fit_range_type = hertz_params.child('Fit Range Type').value()
-        if fit_range_type == 'indentation':
+        if fit_range_type == 'full':
+            angle=90
+            min_val = 0.0
+            max_val = np.max(self.indentation - self.hertz_d0)
+            hertz_params.child('Min Indentation').setValue(min_val * 1e9)
+            hertz_params.child('Max Indentation').setValue(max_val * 1e9)
+        elif fit_range_type == 'indentation':
             angle=90
             min_val = hertz_params.child('Min Indentation').value() / 1e9
             max_val = hertz_params.child('Max Indentation').value() / 1e9
-            if max_val == 0.0:
+            if max_val  == 0.0:
                 max_val = np.max(self.indentation - self.hertz_d0)
                 hertz_params.child('Max Indentation').setValue(max_val * 1e9)
         elif fit_range_type == 'force':
