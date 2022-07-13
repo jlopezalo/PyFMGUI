@@ -5,7 +5,6 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import numpy as np
 
 import pyafmgui.const as cts
-from pyafmgui.helpers.curve_utils import *
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 

@@ -9,7 +9,7 @@ def get_params(params, method):
     if method in ("PiezoChar", "VDrag", "Microrheo", "MicrorheoSine"):
         param_dict['max_freq'] = analysis_params.child('Max Frequency').value()
     if method in ("PiezoChar", "VDrag"):
-        return
+        return param_dict
     if method in ("Microrheo", "MicrorheoSine"):
         param_dict['bcoef'] = analysis_params.child('B Coef').value()
     param_dict['contact_model'] = analysis_params.child('Contact Model').value()

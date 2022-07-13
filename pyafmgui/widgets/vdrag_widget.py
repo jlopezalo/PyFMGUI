@@ -106,8 +106,9 @@ class VDragWidget(QtGui.QWidget):
             self.filedict = self.session.loaded_files
         else:
             self.filedict = {self.session.current_file.filemetadata['file_id']:self.session.current_file}
-        params = get_params(self.params, "HertzFit")
-        compute(self.session, params,  self.filedict, "HertzFit")
+        params = get_params(self.params, "VDrag")
+        params['piezo_char_data'] = self.session.piezo_char_data
+        compute(self.session, params,  self.filedict, "VDrag")
         self.updatePlots()
     
     def load_piezo_char(self):
@@ -191,16 +192,17 @@ class VDragWidget(QtGui.QWidget):
 
         analysis_params = self.params.child('Analysis Params')
         current_file_id = self.current_file.filemetadata['file_id']
-        current_file_data = self.current_file.data
+        current_file = self.current_file
         current_curve_indx = self.session.current_curve_index
         height_channel = analysis_params.child('Height Channel').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
 
-        curve_data = preprocess_curve(current_file_data, current_curve_indx, height_channel, deflection_sens)
+        force_curve = current_file.getcurve(current_curve_indx)
+        force_curve.preprocess_force_curve(deflection_sens, height_channel)
 
-        modulation_segs_data = [seg_data for _, seg_type, seg_data in curve_data if seg_type == 'modulation']
+        modulation_segs = force_curve.modulation_segments
 
-        if modulation_segs_data == []:
+        if modulation_segs == []:
             return
 
         vdrag_result = self.session.vdrag_results.get(current_file_id, None)
@@ -212,27 +214,30 @@ class VDragWidget(QtGui.QWidget):
                     self.Hd = curve_vdrag_result[2]
                     distances = curve_vdrag_result[4]
         
+        curve_segments = force_curve.get_segments()
+        
         t0 = 0
-        n_segments = len(curve_data)
-        for i, (seg_id, seg_type, seg_data) in enumerate(curve_data):
-            time = seg_data['time']
+        n_segments = len(curve_segments)
+        for i, (seg_id, segment) in enumerate(curve_segments):
+            time = segment.time
             plot_time = time + t0
-            if seg_type == 'modulation':
+            if segment.segment_type == 'modulation':
+                freq = segment.segment_metadata['frequency']
                 deltat = time[1] - time[0]
-                nfft = len(seg_data['deflection'])
+                nfft = len(segment.vdeflection)
                 W = fftfreq(nfft, d=deltat)
-                fft_height = fft(seg_data['height'], nfft)
+                fft_height = fft(segment.zheight, nfft)
                 psd_height = fft_height * np.conj(fft_height) / nfft
-                fft_deflect = fft(seg_data['deflection'], nfft)
+                fft_deflect = fft(segment.vdeflection, nfft)
                 psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
                 L = np.arange(1, np.floor(nfft/2), dtype='int')
-                self.p1.plot(plot_time, seg_data['height'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-                self.p2.plot(plot_time, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
-                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{seg_data['frequency']} Hz")
+                self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{freq} Hz")
             else:
-                self.p1.plot(plot_time, seg_data['height'], pen=(i,n_segments), name=f"{seg_type} {seg_id}")
-                self.p2.plot(plot_time, seg_data['deflection'], pen=(i,n_segments), name=f"{seg_type} {seg_id}")
+                self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
+                self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
             t0 = plot_time[-1]
         
         if self.Hd is not None:

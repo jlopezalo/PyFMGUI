@@ -5,28 +5,25 @@ from pyafmrheo.utils.signal_processing import *
 from pyafmrheo.models.rheology import ComputePiezoLag, ComputeBh, ComputeComplexModulus
 
 from pyafmgui.helpers.sineFit_utils import *
+from pyafmgui.routines.hertzfit import do_hertz_fit
 
-def get_retract_ramp_sizes(file_data, curve_idx):
+def get_retract_ramp_sizes(force_curve):
     x0 = 0
     distances = []
-    force_curve = file_data[curve_idx]
     sorted_ret_segments = sorted(force_curve.retract_segments, key=lambda x: int(x[0]))
     for _, first_ret_seg in sorted_ret_segments[:-1]:
         distance_from_sample = -1 * first_ret_seg.segment_metadata['ramp_size'] + x0 # Negative
-        distances.append(distance_from_sample * 1e-9)
-        x0 = distance_from_sample
+        distances.append(distance_from_sample * 1e-9) # in nm
     return distances
 
-def do_piezo_char(self, file_data, curve_indx):
-    curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)
+def do_piezo_char(fdc, param_dict):
     results = []
-    modulation_segs_data = [seg_data for _, seg_type, seg_data in curve_data if seg_type == 'modulation']
-    for seg_data in modulation_segs_data:
-        time = seg_data['time']
-        zheight = seg_data['height']
-        deflection = seg_data['deflection']
-        frequency = seg_data['frequency']
-        if self.max_freq != 0 and frequency > self.max_freq:
+    for _, segment in fdc.modulation_segments:
+        time = segment.time
+        zheight = segment.zheight
+        deflection = segment.vdeflection
+        frequency = segment.segment_metadata['frequency']
+        if param_dict['max_freq'] != 0 and frequency > param_dict['max_freq']:
             continue
         deltat = time[1] - time[0]
         fs = 1 / deltat
@@ -43,24 +40,22 @@ def do_piezo_char(self, file_data, curve_indx):
 
     return (frequencies_results, fi_results, amp_quotient_results, gamma2_results)
 
-def do_vdrag_char(self, file_data, curve_indx):
+def do_vdrag_char(fdc, param_dict):
     fi = 0
     amp_quotient = 1
-    curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)
-    distances = get_retract_ramp_sizes(file_data, curve_indx)
+    distances = get_retract_ramp_sizes(fdc)
     results = []
-    modulation_segs_data = [seg_data for _, seg_type, seg_data in curve_data if seg_type == 'modulation']
-    for seg_data in modulation_segs_data:
-        time = seg_data['time']
-        zheight = seg_data['height']
-        deflection = seg_data['deflection']
-        frequency = seg_data['frequency']
-        if self.max_freq != 0 and frequency > self.max_freq:
+    for _, segment in fdc.modulation_segments:
+        time = segment.time
+        zheight = segment.zheight
+        deflection = segment.vdeflection
+        frequency = segment.segment_metadata['frequency']
+        if param_dict['max_freq'] != 0 and frequency > param_dict['max_freq']:
             continue
         deltat = time[1] - time[0]
         fs = 1 / deltat
-        if self.session.piezo_char_data is not None:
-            piezoChar =  self.session.piezo_char_data.loc[self.session.piezo_char_data['frequency'] == frequency]
+        if param_dict['piezo_char_data'] is not None:
+            piezoChar =  param_dict['piezo_char_data'].loc[param_dict['piezo_char_data']['frequency'] == frequency]
             if len(piezoChar) == 0:
                 print(f"The frequency {frequency} was not found in the piezo characterization dataframe")
             else:
@@ -68,7 +63,7 @@ def do_vdrag_char(self, file_data, curve_indx):
                 amp_quotient = piezoChar['amp_quotient'].item()
         zheight, deflection, _ =\
             detrend_rolling_average(frequency, zheight, deflection, time, 'zheight', 'deflection', [])
-        Bh, Hd, gamma2 = ComputeBh(deflection, zheight, [0, 0], self.k, fs, frequency, fi=fi, amp_quotient=amp_quotient)
+        Bh, Hd, gamma2 = ComputeBh(deflection, zheight, [0, 0], param_dict['k'], fs, frequency, fi=fi, amp_quotient=amp_quotient)
         results.append((frequency, Bh, Hd, gamma2))
     results = sorted(results, key=lambda x: int(x[0]))
     frequencies_results = [x[0] for x in results]
@@ -77,37 +72,38 @@ def do_vdrag_char(self, file_data, curve_indx):
     gamma2_results = [x[3] for x in results]
     return (frequencies_results, Bh_results, Hd_results, gamma2_results, distances)
 
-def do_microrheo(self, file_data, curve_indx):
+def do_microrheo(fdc, param_dict):
     fi = 0
     amp_quotient = 1
-    curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)
-    app_data = curve_data[0][2]
-    app_zheight = app_data['height']
-    app_deflection = app_data['deflection']
-    rov_PoC = get_poc_RoV_method(app_zheight, app_deflection, win_size=self.poc_win)
+    if param_dict['curve_seg'] == 'extend':
+        segment_data = fdc.extend_segments[0][1]
+    else:
+        segment_data = fdc.retract_segments[-1][1]
+        segment_data.zheight = segment_data.zheight[::-1]
+        segment_data.vdeflection = segment_data.vdeflection[::-1]
+    rov_PoC = get_poc_RoV_method(
+        segment_data.zheight, segment_data.vdeflection, win_size=param_dict['poc_win'])
     poc = [rov_PoC[0], 0]
-    app_indentation, app_force = get_force_vs_indentation_curve(app_zheight, app_deflection, poc, self.k)
-    p0 = [self.d0, self.f0, self.slope, self.E0]
-    hertz_result = HertzFit(app_indentation, app_force,  self.contact_model,  self.tip_param, p0,  self.poisson)
-    hertz_d0 = hertz_result.best_values['delta0']
+    hertz_result = do_hertz_fit(fdc, param_dict)
+    hertz_d0 = hertz_result.delta0
     poc[0] += hertz_d0
     poc[1] = 0
-    app_indentation, app_force = get_force_vs_indentation_curve(app_zheight, app_deflection, poc, self.k)
+    segment_data.get_force_vs_indentation(poc, param_dict['k'])
+    app_indentation = segment_data.indentation
     wc = app_indentation.max()
     results = []
-    modulation_segs_data = [seg_data for _, seg_type, seg_data in curve_data if seg_type == 'modulation']
     poc = [0, 0] # Assume d0 as 0, since we are in contact.
-    for seg_data in modulation_segs_data:
-        time = seg_data['time']
-        zheight = seg_data['height']
-        deflection = seg_data['deflection']
-        frequency = seg_data['frequency']
-        if self.max_freq != 0 and frequency > self.max_freq:
+    for _, segment in fdc.modulation_segments:
+        time = segment.time
+        zheight = segment.zheight
+        deflection = segment.vdeflection
+        frequency = segment.segment_metadata['frequency']
+        if param_dict['max_freq'] != 0 and frequency > param_dict['max_freq']:
             continue
         deltat = time[1] - time[0]
         fs = 1 / deltat
-        if self.session.piezo_char_data is not None:
-            piezoChar =  self.session.piezo_char_data.loc[self.session.piezo_char_data['frequency'] == frequency]
+        if param_dict['piezo_char_data'] is not None:
+            piezoChar =  param_dict['piezo_char_data'].loc[param_dict['piezo_char_data']['frequency'] == frequency]
             if len(piezoChar) == 0:
                 print(f"The frequency {frequency} was not found in the piezo characterization dataframe")
             else:
@@ -117,8 +113,8 @@ def do_microrheo(self, file_data, curve_indx):
             detrend_rolling_average(frequency, zheight, deflection, time, 'zheight', 'deflection', [])
         G_storage, G_loss, gamma2 =\
             ComputeComplexModulus(
-                deflection, zheight, poc, self.k, fs, frequency, self.contact_model,
-                self.tip_param, wc, self.poisson, fi=fi, amp_quotient=amp_quotient, bcoef=self.bcoef
+                deflection, zheight, poc, param_dict['k'], fs, frequency, param_dict['contact_model'],
+                param_dict['tip_param'], wc, param_dict['poisson'], fi=fi, amp_quotient=amp_quotient, bcoef=param_dict['bcoef']
             )
         results.append((frequency, G_storage, G_loss, gamma2))
     results = sorted(results, key=lambda x: int(x[0]))
@@ -128,43 +124,49 @@ def do_microrheo(self, file_data, curve_indx):
     gamma2_results = [x[3] for x in results]
     return (frequencies_results, G_storage_results, G_loss_results, gamma2_results)
 
-def do_microrheo_sine(self, file_data, curve_indx):
-    curve_data = preprocess_curve(file_data, curve_indx, self.height_channel, self.def_sens)
-    app_data = curve_data[0][2]
-    app_zheight = app_data['height']
-    app_deflection = app_data['deflection']
-    rov_PoC = get_poc_RoV_method(app_zheight, app_deflection, win_size=self.poc_win)
+def do_microrheo_sine(fdc, param_dict):
+    fi = 0
+    amp_quotient = 1
+    if param_dict['curve_seg'] == 'extend':
+        segment_data = fdc.extend_segments[0][1]
+    else:
+        segment_data = fdc.retract_segments[-1][1]
+        segment_data.zheight = segment_data.zheight[::-1]
+        segment_data.vdeflection = segment_data.vdeflection[::-1]
+    rov_PoC = get_poc_RoV_method(
+        segment_data.zheight, segment_data.vdeflection, win_size=param_dict['poc_win'])
     poc = [rov_PoC[0], 0]
-    app_indentation, app_force = get_force_vs_indentation_curve(app_zheight, app_deflection, poc, self.k)
-    p0 = [self.d0, self.f0, self.slope, self.E0]
-    hertz_result = HertzFit(app_indentation, app_force,  self.contact_model,  self.tip_param, p0,  self.poisson)
-    hertz_d0 = hertz_result.best_values['delta0']
+    hertz_result = do_hertz_fit(fdc, param_dict)
+    hertz_d0 = hertz_result.delta0
     poc[0] += hertz_d0
     poc[1] = 0
-    app_indentation, app_force = get_force_vs_indentation_curve(app_zheight, app_deflection, poc, self.k)
+    segment_data.get_force_vs_indentation(poc, param_dict['k'])
+    app_indentation = segment_data.indentation
     wc = app_indentation.max()
     results = []
-    modulation_segs_data = [seg_data for _, seg_type, seg_data in curve_data if seg_type == 'modulation']
-    for seg_data in modulation_segs_data:
-        time = seg_data['time']
-        zheight = seg_data['height']
-        deflection = seg_data['deflection']
-        frequency = seg_data['frequency']
-        if self.max_freq != 0 and frequency > self.max_freq:
+    poc = [0, 0] # Assume d0 as 0, since we are in contact.
+    for _, segment in fdc.modulation_segments:
+        time = segment.time
+        zheight = segment.zheight
+        deflection = segment.vdeflection
+        frequency = segment.segment_metadata['frequency']
+        if param_dict['max_freq'] != 0 and frequency > param_dict['max_freq']:
             continue
-        if self.session.piezo_char_data is not None:
-            piezoChar =  self.session.piezo_char_data.loc[self.session.piezo_char_data['frequency'] == frequency]
+        deltat = time[1] - time[0]
+        fs = 1 / deltat
+        if param_dict['piezo_char_data'] is not None:
+            piezoChar =  param_dict['piezo_char_data'].loc[param_dict['piezo_char_data']['frequency'] == frequency]
             if len(piezoChar) == 0:
                 print(f"The frequency {frequency} was not found in the piezo characterization dataframe")
             else:
                 fi = piezoChar['fi_degrees'].item() # In degrees
                 amp_quotient = piezoChar['amp_quotient'].item()
-                # Implement correction for amplitude and phi
         
         zheight, deflection, time =\
             detrend_rolling_average(frequency, zheight, deflection, time, 'zheight', 'deflection', [])
         
-        indentation, _ = get_force_vs_indentation_curve(zheight, deflection, [0,0], self.k)
+        segment.get_force_vs_indentation([0,0], param_dict['k'])
+        indentation = segment.indentation
         
         omega = 2.*np.pi*frequency
         guess_amp_ind = np.std(indentation) * 2.**0.5
@@ -191,8 +193,9 @@ def do_microrheo_sine(self, file_data, curve_indx):
         dPhi = Phi_defl - Phi_ind
 
         G = getGComplex(
-            self.contact_model, self.tip_param, self.k, self.poisson, A_defl, A_ind, wc, dPhi, frequency, self.bcoef
-            )
+            param_dict['contact_model'], param_dict['tip_param'], param_dict['k'], 
+            param_dict['poisson'], A_defl, A_ind, wc, dPhi, frequency, param_dict['bcoef']
+        )
         
         results.append((frequency, G.real, G.imag, ind_res, defl_res))
     

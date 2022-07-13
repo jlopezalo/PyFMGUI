@@ -9,7 +9,6 @@ import pandas as pd
 from scipy.fft import fft, fftfreq
 
 import pyafmgui.const as cts
-from pyafmgui.helpers.curve_utils import *
 from pyafmrheo.utils.signal_processing import *
 
 from pyafmgui.compute import compute
@@ -118,6 +117,7 @@ class MicrorheoWidget(QtGui.QWidget):
             methodkey = "MicrorheoSine"
         self.session.microrheo_results = {}
         params = get_params(self.params, methodkey)
+        params['piezo_char_data'] = self.session.piezo_char_data
         compute(self.session, params, self.filedict, methodkey)
         self.updatePlots()
     
@@ -241,8 +241,9 @@ class MicrorheoWidget(QtGui.QWidget):
         t0_2 = 0
         n_segments = len(modulation_segs)
         if method == 'FFT':
-            for i, segment in enumerate(modulation_segs):
+            for i, (_, segment) in enumerate(modulation_segs):
                 time = segment.time
+                freq = segment.segment_metadata['frequency']
                 plot_time = time + t0
                 deltat = time[1] - time[0]
                 nfft = len(segment.vdeflection)
@@ -252,10 +253,10 @@ class MicrorheoWidget(QtGui.QWidget):
                 fft_deflect = fft(segment.vdeflection, nfft)
                 psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
                 L = np.arange(1, np.floor(nfft/2), dtype='int')
-                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
-                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
-                self.p1.plot(plot_time, seg_data.zheight, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
-                self.p2.plot(plot_time, seg_data.vdeflection, pen=(i,n_segments), name=f"{segment.segment_metadata['frequency']} Hz")
+                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")
                 t0 = plot_time[-1]
         
             self.p3.setLabel('left', 'zHeight PSD')
@@ -271,7 +272,7 @@ class MicrorheoWidget(QtGui.QWidget):
             self.p4.addLegend()
 
         elif method == 'Sine Fit':
-            for i, segment in enumerate(modulation_segs):
+            for i, (_, segment) in enumerate(modulation_segs):
                 freq = segment.segment_metadata['frequency']
                 time = segment.time
                 plot_time_1 = time + t0
