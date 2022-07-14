@@ -157,7 +157,8 @@ class DataViewerWidget(QtGui.QWidget):
             # create transform to center the corner element on the origin, for any assigned image:
             self.correlogram.setImage(self.session.current_file.piezoimg * 1e6)
             self.bar.setLevels((self.session.current_file.piezoimg.min() * 1e6, self.session.current_file.piezoimg.max() * 1e6))
-            rows, cols = self.session.current_file.piezoimg.shape
+            shape = self.session.current_file.piezoimg.shape
+            rows, cols = shape[0], shape[1]
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
             curve_coords = np.arange(cols*rows).reshape((cols, rows))

@@ -14,15 +14,12 @@ def analyze_fdc(session, param_dict, fdc):
     fdc.preprocess_force_curve(param_dict['def_sens'], param_dict['height_channel'])
     if session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
         fdc.shift_height()
-    try:
-        if param_dict['method']  == "HertzFit": return do_hertz_fit(fdc, param_dict)
-        elif param_dict['method'] == "TingFit": return do_ting_fit(fdc, param_dict)
-        elif param_dict['method'] == "PiezoChar": return do_piezo_char(fdc, param_dict)
-        elif param_dict['method'] == "VDrag": return do_vdrag_char(fdc, param_dict)
-        elif param_dict['method'] == "Microrheo": return do_microrheo(fdc, param_dict)
-        elif param_dict['method'] == "MicrorheoSine": return do_microrheo_sine(fdc, param_dict)
-    except Exception:
-        traceback.print_exc()
+    if param_dict['method']  == "HertzFit": return do_hertz_fit(fdc, param_dict)
+    elif param_dict['method'] == "TingFit": return do_ting_fit(fdc, param_dict)
+    elif param_dict['method'] == "PiezoChar": return do_piezo_char(fdc, param_dict)
+    elif param_dict['method'] == "VDrag": return do_vdrag_char(fdc, param_dict)
+    elif param_dict['method'] == "Microrheo": return do_microrheo(fdc, param_dict)
+    elif param_dict['method'] == "MicrorheoSine": return do_microrheo_sine(fdc, param_dict)
 
 def clear_file_results(session, method, file_id):
     if file_id in session.hertz_fit_results and method == "HertzFit":
@@ -45,7 +42,7 @@ def compute(session, params, filedict, method):
         # Declare list to save file results
         file_results = []
         # Process only current curve
-        if not params['compute_all_curves']:
+        if not params['compute_all_curves'] or not file.isFV:
             # Get current selected index
             curve_idx = session.current_curve_index
             # Get force distance curve at index
@@ -54,7 +51,7 @@ def compute(session, params, filedict, method):
             file_results.append((curve_idx, analyze_fdc(session, params, fdc)))
         else:
             # Get the total number of curves to process
-            nb_curves = file.filemetadata['Entry_tot_nb_curve'] + 1
+            nb_curves = file.filemetadata['Entry_tot_nb_curve']
             # Define all curve indices
             curve_indices = list(range(nb_curves))
             # Process all curves in paralel
@@ -65,8 +62,12 @@ def compute(session, params, filedict, method):
                     pass
             with mp.Parallelize(tasks=curve_indices, results=file_results, progressDialog=f'Processing File: {file_id}') as tasker:
                 for idx in tasker:
-                    fdc = file.getcurve(idx)
-                    tasker.results.append((idx, analyze_fdc(session, params, fdc)))
+                    try:
+                        fdc = file.getcurve(idx)
+                        tasker.results.append((idx, analyze_fdc(session, params, fdc)))
+                    except Exception:
+                        traceback.print_exc()
+                        tasker.results.append((idx, None))
                 
         # Save results in the current session
         if params['method']  == "HertzFit":

@@ -144,7 +144,8 @@ class MicrorheoWidget(QtGui.QWidget):
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
             self.correlogram.setImage(self.current_file.piezoimg)
-            rows, cols = self.session.current_file.piezoimg.shape
+            shape = self.session.current_file.piezoimg.shape
+            rows, cols = shape[0], shape[1]
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
             curve_coords = np.arange(cols*rows).reshape((cols, rows))

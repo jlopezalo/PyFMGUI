@@ -106,7 +106,9 @@ def prepare_export_results(session):
                         'file_path': file_path, 'file_id': file_id, 
                         'curve_idx': curve_indx, 'kcanti': k, 'defl_sens': defl_sens
                     }
-                    if result_type == 'hertz_results':
+                    if curve_result[1] is None:
+                        outputdf = outputdf.append(row_dict, ignore_index=True)
+                    elif result_type == 'hertz_results':
                         hertz_result = curve_result[1]
                         row_dict = unpack_hertz_result(row_dict, hertz_result)
                     elif result_type == 'ting_results':
@@ -132,5 +134,10 @@ def prepare_export_results(session):
     return output
 
 def export_results(results, dirname, file_prefix):
+    success_flag = False
     for result_type, result_df in results.items():
+        if result_df is None:
+            continue
         result_df.to_csv(os.path.join(dirname, f'{file_prefix}_{result_type}.csv'), index=False)
+        success_flag = True
+    return success_flag

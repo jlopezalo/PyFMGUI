@@ -1,6 +1,9 @@
 import PyQt5
 from pyqtgraph.Qt import QtWidgets, QtCore, QtGui
 from pyqtgraph import TableWidget
+
+import numpy as np
+
 from pyafmgui.export import result_types, prepare_export_results, export_results
 
 class ExportDialog(QtGui.QWidget):
@@ -84,12 +87,13 @@ class ExportDialog(QtGui.QWidget):
     
     def doexport(self):
         self.file_prefix = self.file_prefix_text.toPlainText()
-        if self.dirname and self.file_prefix and self.results:
-            export_results(self.results, self.dirname, self.file_prefix)
-            self.open_msg_box("Export was successful!")
+        if self.dirname and self.file_prefix:
+            success_flag = export_results(self.results, self.dirname, self.file_prefix)
+            if success_flag:
+                self.open_msg_box("Export was successful!")
+            else:
+                self.open_msg_box("No results were found to export!")
         elif self.dirname is None:
             self.open_msg_box("Please provide a directory!")
-        elif self.file_prefix:
+        elif self.file_prefix == "":
             self.open_msg_box("Please provide a file prefix!")
-        elif self.results:
-            self.open_msg_box("No results to export were found!")
