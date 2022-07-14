@@ -19,8 +19,6 @@ class LoadFilesThread(QtCore.QThread):
             self._signal_id.emit(filepath)
             file = loadfile(filepath)
             file_id = file.filemetadata['Entry_filename']
-            print(file_id)
-            print(file.filemetadata)
             if file.isFV:
                 file.getpiezoimg()
             self.session.loaded_files[file_id] = file

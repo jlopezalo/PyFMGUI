@@ -13,6 +13,7 @@ from pyafmgui.widgets.vdrag_widget import VDragWidget
 from pyafmgui.widgets.microrheo_widget import MicrorheoWidget
 from pyafmgui.widgets.dataviewer_widget import DataViewerWidget
 from pyafmgui.widgets.thermaltune_widget import ThermalTuneWidget
+from pyafmgui.widgets.macro_widget import MacroWidget
 
 class MainWindow(QtWidgets.QMainWindow):
 	def __init__(self, session, parent = None):
@@ -69,6 +70,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		openMicrorheo = QtGui.QAction("Microrheology", self)
 		openMicrorheo.setToolTip("Open new Hertz Fit data analysis window.")
 		openMicrorheo.triggered.connect(self.open_analysis_window)
+
+		openMacro = QtGui.QAction("Macrowidget", self)
+		openMacro.setToolTip("Open new Macro window.")
+		openMacro.triggered.connect(self.open_analysis_window)
 		
 		self.toolbar.addAction(openDataViewer)
 		self.toolbar.addAction(openCalibrationManager)
@@ -77,6 +82,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.toolbar.addAction(openPiezoChar)
 		self.toolbar.addAction(openVDrag)
 		self.toolbar.addAction(openMicrorheo)
+		self.toolbar.addAction(openMacro)
 	
 	def add_subwindow(self, widget, tittle):
 		sub = QtWidgets.QMdiSubWindow()
@@ -103,6 +109,8 @@ class MainWindow(QtWidgets.QMainWindow):
 			widget_to_open = VDragWidget(self.session)
 		elif action == "Microrheology" and self.session.microrheo_widget is None:
 			widget_to_open = MicrorheoWidget(self.session)
+		elif action == "Macrowidget":
+			widget_to_open = MacroWidget(self.session)
 		if widget_to_open is not None:
 			self.add_subwindow(widget_to_open, action)
 			

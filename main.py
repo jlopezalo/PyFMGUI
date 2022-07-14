@@ -3,6 +3,7 @@ import multiprocessing
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
+import pyqtgraph.console.template_pyqt5
 import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt5
 import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt5
 import pyqtgraph.imageview.ImageViewTemplate_pyqt5
