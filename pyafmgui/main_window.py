@@ -21,7 +21,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.init_gui()
 		
 	def init_gui(self):
-		self.setWindowTitle("PyAFMRheo v.0.0.1")
+		self.setWindowTitle("PyAFMRheo v.0.0.2")
 
 		self.mdi = QtWidgets.QMdiArea()
 		self.setCentralWidget(self.mdi)
@@ -109,7 +109,13 @@ class MainWindow(QtWidgets.QMainWindow):
 	def windowaction(self, q):
 		if q.text() == "Load Single File":
 			fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-				self, 'Open file', './', "JPK files (*.jpk-force *.jpk-force-map *.jpk-qi-data)"
+				self, 
+				'Open file', 
+				'./', 
+				"""
+				JPK files (*.jpk-force *.jpk-force-map *.jpk-qi-data);;
+				Nanoscope files (*.spm, *.pfc)
+				"""
 			)
 			if fname != "" and fname is not None:
 				self.load_files([fname])
@@ -132,7 +138,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.remove_all_files_and_results()
 	
 	def getFileList(self, directory):
-		types = ('*.jpk-force', '*.jpk-force-map', '*.jpk-qi-data')
+		types = ('*.jpk-force', '*.jpk-force-map', '*.jpk-qi-data', '*.spm', '*.pfc')
 		dataset_files = []
 		for files in types:
 			dataset_files.extend(glob.glob(f'{directory}/**/{files}', recursive=True))

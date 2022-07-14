@@ -37,6 +37,7 @@ def clear_file_results(session, method, file_id):
         session.microrheo_results.pop(file_id)
 
 def compute(session, params, filedict, method):
+    print(filedict)
     # Process files and curves
     for file_id, file in filedict.items():
         # Delete previous results for the file

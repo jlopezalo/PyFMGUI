@@ -110,7 +110,7 @@ class MicrorheoWidget(QtGui.QWidget):
         if self.params.child('General Options').child('Compute All Files').value():
             self.filedict = self.session.loaded_files
         else:
-            self.filedict = {self.session.current_file.filemetadata['file_id']:self.session.current_file}
+            self.filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
         if self.params.child('Analysis Params').child('Method').value() == "FFT":
             methodkey = "Microrheo"
         else:
@@ -162,7 +162,7 @@ class MicrorheoWidget(QtGui.QWidget):
     
     def updateCombo(self):
         self.combobox.addItems(self.session.loaded_files.keys())
-        index = self.combobox.findText(self.current_file.filemetadata['file_id'], QtCore.Qt.MatchFlag.MatchContains)
+        index = self.combobox.findText(self.current_file.filemetadata['Entry_filename'], QtCore.Qt.MatchFlag.MatchContains)
         if index >= 0:
             self.combobox.setCurrentIndex(index)
         self.update()
@@ -207,7 +207,7 @@ class MicrorheoWidget(QtGui.QWidget):
         self.defl_results = None
 
         analysis_params = self.params.child('Analysis Params')
-        current_file_id = self.current_file.filemetadata['file_id']
+        current_file_id = self.current_file.filemetadata['Entry_filename']
         current_file = self.current_file
         current_curve_indx = self.session.current_curve_index
         height_channel = analysis_params.child('Height Channel').value()

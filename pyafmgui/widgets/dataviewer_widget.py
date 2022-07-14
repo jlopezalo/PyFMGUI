@@ -48,14 +48,14 @@ class DataViewerWidget(QtGui.QWidget):
 
         self.correlogram = pg.ImageItem(lockAspect=True, autoDownsample=False)
 
-        self.plotItem.addItem(self.correlogram)    # display correlogram
-
         colorMap = pg.colormap.get('afmhot', source='matplotlib', skipCache=True)     # choose perceptually uniform, diverging color map
         # generate an adjustabled color bar, initially spanning -1 to 1:
         self.bar = pg.ColorBarItem(
-            interactive=False, values=(0,0), cmap=colorMap) 
+            interactive=False, values=(0,0), width=25, cmap=colorMap) 
         # link color bar and color map to correlogram, and show it in plotItem:
         self.bar.setImageItem(self.correlogram, insert_in=self.plotItem)
+
+        self.plotItem.addItem(self.correlogram)    # display correlogram
 
         self.p1 = pg.PlotItem()
 
@@ -88,6 +88,7 @@ class DataViewerWidget(QtGui.QWidget):
         self.metadata_tree.setData(data="No loaded data")
     
     def updateTable(self):
+        self.tree.clear()
         filelist = self.session.loaded_files
         items = [QtWidgets.QTreeWidgetItem([file_id]) for file_id in filelist.keys()]
         self.tree.insertTopLevelItems(0, items)
@@ -108,20 +109,22 @@ class DataViewerWidget(QtGui.QWidget):
         n_segments = len(fc_segments)
         for i, (seg_id, segment) in enumerate(fc_segments):
             x = getattr(segment, xkey)
+            x_units = 'm'
             if xkey == "time":
                 x = x + t0
                 t0 = x[-1]
+                x_units = 's'
             y = getattr(segment, ykey)
             self.p1.plot(x, y, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
-        self.p1.setLabel('left', ykey)
-        self.p1.setLabel('bottom', xkey)
+        self.p1.setLabel('left', ykey, 'm')
+        self.p1.setLabel('bottom', xkey, x_units)
         self.p1.setTitle(f"{ykey}-{xkey}")
     
     def updateCurve(self):
         idx = self.session.current_curve_index
         height_channel = self.session.current_file.filemetadata['height_channel_key']
         if self.session.global_involts is None:
-            deflection_sens = self.session.current_file.filemetadata['defl_sens_nmbyV']
+            deflection_sens = self.session.current_file.filemetadata['defl_sens_nmbyV'] / 1e9
         else:
             deflection_sens = self.session.global_involts
         force_curve = self.session.current_file.getcurve(idx)
@@ -146,14 +149,14 @@ class DataViewerWidget(QtGui.QWidget):
 
         if self.session.current_file.isFV:
             self.l.addItem(self.plotItem)
-            self.plotItem.setTitle("piezo height")
+            self.plotItem.setTitle("Piezo Height (μm)")
             self.plotItem.setLabel('left', 'y pixels')
             self.plotItem.setLabel('bottom', 'x pixels')
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
             # create transform to center the corner element on the origin, for any assigned image:
-            self.correlogram.setImage(self.session.current_file.piezoimg)
-            self.bar.setLevels((self.session.current_file.piezoimg.min(), self.session.current_file.piezoimg.max()))
+            self.correlogram.setImage(self.session.current_file.piezoimg * 1e6)
+            self.bar.setLevels((self.session.current_file.piezoimg.min() * 1e6, self.session.current_file.piezoimg.max() * 1e6))
             rows, cols = self.session.current_file.piezoimg.shape
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)

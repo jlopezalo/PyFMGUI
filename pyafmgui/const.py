@@ -149,10 +149,15 @@ general_params = {'name': 'General Options', 'type': 'group', 'children': [
         {'name': 'Compute All Files', 'type': 'bool', 'value': False}
     ]}
 
+# plot_params = {'name': 'Display Options', 'type': 'group', 'children': [
+#         {'name': 'Curve X axis', 'type': 'list', 'limits': ['zheight', 'time']},
+#         {'name': 'Curve Y axis', 'type': 'list', 'limits': ['vdeflection', 'zheight']},
+#         {'name': 'Map Data', 'type': 'list', 'limits': ['piezo height', 'Data Missing Check', 'Slope Check', 'Baseline Noise Check']}
+#     ]}
+
 plot_params = {'name': 'Display Options', 'type': 'group', 'children': [
         {'name': 'Curve X axis', 'type': 'list', 'limits': ['zheight', 'time']},
-        {'name': 'Curve Y axis', 'type': 'list', 'limits': ['vdeflection', 'zheight']},
-        {'name': 'Map Data', 'type': 'list', 'limits': ['piezo height', 'Data Missing Check', 'Slope Check', 'Baseline Noise Check']}
+        {'name': 'Curve Y axis', 'type': 'list', 'limits': ['vdeflection', 'zheight']}
     ]}
 
 rheo_params = {'name': 'Analysis Params', 'type': 'group', 'children': [

@@ -1,5 +1,6 @@
 class Session:
     def __init__(self):
+        self.loaded_files_paths = []
         self.loaded_files = {}
         self.hertz_fit_results = {}
         self.thermal_tune_results = {}
@@ -23,6 +24,7 @@ class Session:
         self.piezo_char_file_path = None
     
     def remove_results(self):
+        self.loaded_files_paths = []
         self.loaded_files = {}
         self.hertz_fit_results = {}
         self.thermal_tune_results = {}
