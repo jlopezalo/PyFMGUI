@@ -300,7 +300,7 @@ class MacroWidget(QtGui.QWidget):
         buffer = StringIO()
         with redirect_stdout(buffer):
             try:
-                exec(self.codeView.toPlainText(), {"pyafmsession":self.session, "help":help})
+                exec(self.codeView.toPlainText(), {"pyafmsession":self.session})
             except Exception:
                 traceback.print_exc(file=buffer)
         output = buffer.getvalue()
