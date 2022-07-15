@@ -1,10 +1,10 @@
+macro_example = """
 # Simple example showing how macros are supposed to work
 import numpy as np
 import matplotlib.pyplot as plt
 
 # The pyafmsession object holds all the files and results computed by the software
 help(pyafmsession)
-
 print(dir(pyafmsession))
 
 # Define function to plot a line
@@ -14,3 +14,4 @@ def foo():
 
 # Run function
 foo()
+"""

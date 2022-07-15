@@ -8,6 +8,7 @@ import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 import traceback
+from pyafmgui.widgets.macro_example import macro_example
 
 QRegularExpression = QtCore.QRegularExpression
 
@@ -262,8 +263,9 @@ class MacroWidget(QtGui.QWidget):
         self.codeView.textChanged.connect(self.onTextChange)
         self.codeBtn.clicked.connect(self.runCode)
 
-        self.default_macro_path = './pyafmgui/widgets/macro_example.py'
-        self.loadCode(self.default_macro_path)
+        self.loadCode()
+
+        self.outputView.setPlainText('> When you print the output will be shown here...')
     
     def loadCodeFile(self):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -273,13 +275,16 @@ class MacroWidget(QtGui.QWidget):
     
     def loadCode(self, file_path=None):
         if file_path is None:
-            file_path = self.default_macro_path
-        code = ""
-        with open(file_path, 'r') as file:
-            for line in file.readlines():
-                code += line
-        self.codeView.setPlainText(code)
-        self.filename.setText(file_path)
+            code = macro_example
+            self.codeView.setPlainText(code)
+            self.filename.setText('macro_example')
+        else:
+            code = ""
+            with open(file_path, 'r') as file:
+                for line in file.readlines():
+                    code += line
+            self.codeView.setPlainText(code)
+            self.filename.setText(file_path)
 
     def onTextChange(self):
         """
@@ -295,8 +300,8 @@ class MacroWidget(QtGui.QWidget):
         buffer = StringIO()
         with redirect_stdout(buffer):
             try:
-                exec(self.codeView.toPlainText(), {"pyafmsession":self.session})
+                exec(self.codeView.toPlainText(), {"pyafmsession":self.session, "help":help})
             except Exception:
                 traceback.print_exc(file=buffer)
         output = buffer.getvalue()
-        self.outputView.setPlainText(output)
+        self.outputView.setPlainText(f'> {output}')
