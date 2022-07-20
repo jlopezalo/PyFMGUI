@@ -165,8 +165,8 @@ def do_microrheo_sine(fdc, param_dict):
         zheight, deflection, time =\
             detrend_rolling_average(frequency, zheight, deflection, time, 'zheight', 'deflection', [])
         
-        segment.get_force_vs_indentation([0,0], param_dict['k'])
-        indentation = segment.indentation
+        #d0 = 0
+        indentation = zheight - deflection
         
         omega = 2.*np.pi*frequency
         guess_amp_ind = np.std(indentation) * 2.**0.5
@@ -180,15 +180,18 @@ def do_microrheo_sine(fdc, param_dict):
         # Amplitude
         A_ind = ind_res.best_values['A']
         A_defl = defl_res.best_values['A']
+
         # Phase
         Phi_ind = ind_res.best_values['p']
         Phi_defl = defl_res.best_values['p']
+
         if A_ind < 0:
             A_ind = -A_ind
             Phi_ind += np.pi
         if A_defl < 0:
             A_defl = -A_defl
             Phi_defl += np.pi
+
         # Delta Phi
         dPhi = Phi_defl - Phi_ind
 

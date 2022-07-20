@@ -6,7 +6,7 @@ import re
 import matplotlib.pyplot as plt
 from scipy.special import kv
 from lmfit import Model, Parameters
-from pyafmgui.helpers.Sader_GCI_demo import SaderGCI_CalculateK, SaderGCI_GetLeverList
+from pyafmgui.helpers.Sader_GCI_demo import SaderGCI_CalculateK
 
 def get_K_Classic(fR, Q, A1, temperature):
     BoltzmannConst = 1.38065e-23
@@ -130,7 +130,7 @@ def loadThermal(file_path):
         header_rows = 23
         header_sep = '\n'
         data_sep = ' '
-        file_header = pd.read_csv(file_path, sep=header_sep, header=None, nrows=header_rows)
+        file_header = pd.read_csv(file_path, header=None, nrows=header_rows)
         file_data = pd.read_csv(
             file_path, sep=data_sep, comment='#',
             names = ['Frequency', 'Vertical Deflection', 'average', 'fit-data'],

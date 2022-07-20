@@ -229,7 +229,6 @@ class MicrorheoWidget(QtGui.QWidget):
         if microrheo_result:
             for curve_indx, curve_microrheo_result in microrheo_result:
                 if curve_indx == self.session.current_curve_index:
-                    print(curve_microrheo_result)
                     self.freqs = curve_microrheo_result[0]
                     self.G_storage = np.array(curve_microrheo_result[1])
                     self.G_loss = np.array(curve_microrheo_result[2])
@@ -277,17 +276,17 @@ class MicrorheoWidget(QtGui.QWidget):
                 freq = segment.segment_metadata['frequency']
                 time = segment.time
                 plot_time_1 = time + t0
-                segment.zheight, segment.vdeflection, time_2 =\
+                zheight, vdeflection, time_2 =\
                     detrend_rolling_average(freq, segment.zheight, segment.vdeflection, time, 'zheight', 'deflection', [])
-                segment.get_force_vs_indentation([0,0], spring_k)
+                indentation = zheight -  vdeflection
                 plot_time_2 = time_2 - time_2[0] + t0_2
-                self.p3.plot(plot_time_2 , segment.indentation, pen='w')
-                self.p4.plot(plot_time_2, segment.vdeflection, pen='w')
+                self.p3.plot(plot_time_2 , indentation, pen='w')
+                self.p4.plot(plot_time_2, vdeflection, pen='w')
                 if self.ind_results is not None and self.defl_results is not None:
                     idx = int((np.abs(np.array(self.freqs) - freq)).argmin())
                     indentation_res = self.ind_results[idx].eval(time=time_2)
                     deflection_res = self.defl_results[idx].eval(time=time_2)
-                    self.p3.plot(plot_time_2, indentation_res, pen='g')
+                    self.p3.plot(plot_time_2, -1 * indentation_res, pen='g')
                     self.p4.plot(plot_time_2, deflection_res, pen='g')
                 self.p1.plot(plot_time_1, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
                 self.p2.plot(plot_time_1, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")

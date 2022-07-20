@@ -32,7 +32,7 @@ def SineFit(wave, time, p0):
     return funcsine.fit(wave, params, time=time)
 
 def getGComplex(probe_model, tip_param, k, poisson, A_defl, A_ind, Avg_ind, dPhi, freq, bh0):
-    print(probe_model, tip_param, k, poisson, A_defl, A_ind, Avg_ind, dPhi, freq, bh0)
+    # print(probe_model, tip_param, k, poisson, A_defl, A_ind, Avg_ind, dPhi, freq, bh0)
     if probe_model == "cone":
         n = 2
         A_lambda = 2 / np.pi * np.tan(np.radians(tip_param))
@@ -42,7 +42,7 @@ def getGComplex(probe_model, tip_param, k, poisson, A_defl, A_ind, Avg_ind, dPhi
         n = 3/2
         A_lambda = 4 / 3 * np.sqrt(tip_param)
         G = complex( k * A_defl / A_ind  * np.cos(dPhi),  k * A_defl / A_ind * np.sin(dPhi) -  2 * np.pi * freq * bh0 )
-        print(G)
+        # print(G)
         return G  * ( ( 1 - poisson**2 ) / ( n * A_lambda * Avg_ind**(n-1) )  )
     elif probe_model == "pyramid":
         n = 2
