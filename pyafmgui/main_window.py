@@ -2,7 +2,7 @@ import glob
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
-from pyafmgui.loadfilesthread import LoadFilesThread
+from pyafmgui.loadfiles import loadfiles
 
 from pyafmgui.widgets.customdialog import CustomDialog
 from pyafmgui.widgets.exportdialog import ExportDialog
@@ -22,7 +22,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.init_gui()
 		
 	def init_gui(self):
-		self.setWindowTitle("PyAFMRheo v.0.0.2")
+		self.setWindowTitle("PyAFMRheo v.0.0.3")
 
 		self.mdi = QtWidgets.QMdiArea()
 		self.setCentralWidget(self.mdi)
@@ -122,7 +122,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				'./', 
 				"""
 				JPK files (*.jpk-force *.jpk-force-map *.jpk-qi-data);;
-				Nanoscope files (*.spm, *.pfc)
+				Nanoscope files (*.spm *.pfc)
 				"""
 			)
 			if fname != "" and fname is not None:
@@ -153,14 +153,8 @@ class MainWindow(QtWidgets.QMainWindow):
 		return dataset_files
 	
 	def load_files(self, filelist):
-		self.dialog = CustomDialog("fileload")
-		self.dialog.show()
-		self.dialog.pbar_files.setRange(0, len(filelist)-1)
-		self.thread = LoadFilesThread(self.session, filelist)
-		self.thread._signal_id.connect(self.signal_accept2)
-		self.thread._signal_file_progress.connect(self.signal_accept)
-		self.thread.finished.connect(self.close_dialog)
-		self.thread.start()
+		loadfiles(self.session, filelist)
+		self.close_dialog()
 
 	def signal_accept(self, msg):
 		self.dialog.pbar_files.setValue(int(msg))
@@ -169,7 +163,6 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.dialog.label.setText(msg)
 	
 	def close_dialog(self):
-		self.dialog.close()
 		if self.session.data_viewer_widget:
 			self.session.data_viewer_widget.updateTable()
 		if self.session.hertz_fit_widget:

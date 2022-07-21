@@ -77,7 +77,12 @@ class ExportDialog(QtGui.QWidget):
         if self.results[result_key] is None:
             self.table_preview.clear()
         else:
-            self.table_preview.setData(self.results[result_key].to_dict('records'))
+            res = self.results[result_key].to_dict('records')
+            if len(res) < 50:
+                self.table_preview.setData(self.results[result_key].to_dict('records'))
+            else:
+                self.table_preview.setData(self.results[result_key].head(50).to_dict('records'))
+                self.open_msg_box(f"Showing only first 50 out of {len(res)} results.")
     
     def open_msg_box(self, message):
         dlg = QtWidgets.QMessageBox(self)

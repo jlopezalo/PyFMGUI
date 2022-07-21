@@ -133,8 +133,23 @@ class VDragWidget(QtGui.QWidget):
             self.l2.addItem(self.plotItem)
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
-            self.correlogram.setImage(self.current_file.piezoimg)
-            shape = self.session.current_file.piezoimg.shape
+            # create transform to center the corner element on the origin, for any assigned image:
+            if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
+                img = self.session.current_file.imagedata.get('Height(measured)', None)
+                if img is None:
+                    img = self.session.current_file.imagedata.get('Height', None)
+                img = np.rot90(np.fliplr(img))
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
+                curve_coords = np.rot90(np.fliplr(curve_coords))
+            elif self.session.current_file.filemetadata['file_type'] in cts.nanoscope_file_extensions:
+                img = self.session.current_file.piezoimg
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
+            self.correlogram.setImage(img)
+            shape = img.shape
             rows, cols = shape[0], shape[1]
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
@@ -152,6 +167,7 @@ class VDragWidget(QtGui.QWidget):
         self.update()
     
     def updateCombo(self):
+        self.combobox.clear()
         self.combobox.addItems(self.session.loaded_files.keys())
         index = self.combobox.findText(self.current_file.filemetadata['Entry_filename'], QtCore.Qt.MatchFlag.MatchContains)
         if index >= 0:

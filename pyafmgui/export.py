@@ -1,6 +1,10 @@
 import os
 import pandas as pd
 
+import pyqtgraph.multiprocess as mp
+
+import platform, multiprocessing
+
 result_types = [
     'hertz_results',
     'ting_results', 
@@ -92,45 +96,59 @@ def prepare_export_results(session):
         'microrheo_results': None
     }
 
+    if platform.system() == "Darwin":
+        try:
+            multiprocessing.set_start_method('spawn')
+        except RuntimeError:
+            pass
     for result_type, result in results.items():
         if result != {}:
-            outputdf = pd.DataFrame()
-            for file_id, file_result in result.items():
-                filemetadata = session.loaded_files[file_id].filemetadata
-                file_path = filemetadata['file_path']
-                k = filemetadata['spring_const_Nbym']
-                defl_sens = filemetadata['defl_sens_nmbyV']
-                for curve_result in file_result:
-                    curve_indx = curve_result[0]
-                    row_dict = {
-                        'file_path': file_path, 'file_id': file_id, 
-                        'curve_idx': curve_indx, 'kcanti': k, 'defl_sens': defl_sens
-                    }
-                    if curve_result[1] is None:
-                        outputdf = outputdf.append(row_dict, ignore_index=True)
-                    elif result_type == 'hertz_results':
-                        hertz_result = curve_result[1]
-                        row_dict = unpack_hertz_result(row_dict, hertz_result)
-                    elif result_type == 'ting_results':
+            loaded_results = []
+            with mp.Parallelize(tasks=list(result.items()), results=loaded_results, progressDialog='Loading Results') as tasker:
+                for file_id, file_result in tasker:
+                    filemetadata = session.loaded_files[file_id].filemetadata
+                    file_path = filemetadata['file_path']
+                    k = filemetadata['spring_const_Nbym']
+                    defl_sens = filemetadata['defl_sens_nmbyV']
+                    for curve_result in file_result:
                         curve_indx = curve_result[0]
-                        ting_result = curve_result[1][0]
-                        hertz_result = curve_result[1][1]
-                        row_dict = unpack_hertz_result(row_dict, hertz_result)
-                        row_dict = unpack_ting_result(row_dict, ting_result)
-                    elif result_type == 'piezochar_results':
-                        curve_indx = curve_result[0]
-                        piezochar_result = curve_result[1]
-                        row_dict = unpack_piezochar_result(row_dict, piezochar_result)
-                    elif result_type == 'vdrag_results':
-                        curve_indx = curve_result[0]
-                        vdrag_result = curve_result[1]
-                        row_dict = unpack_vdrag_result(row_dict, vdrag_result)
-                    elif result_type == 'microrheo_results':
-                        curve_indx = curve_result[0]
-                        microrheo_result = curve_result[1]
-                        row_dict = unpack_microrheo_result(row_dict, microrheo_result)
-                    outputdf = outputdf.append(row_dict, ignore_index=True)
+                        row_dict = {
+                            'file_path': file_path, 'file_id': file_id, 
+                            'curve_idx': curve_indx, 'kcanti': k, 'defl_sens': defl_sens
+                        }
+                        if result_type == 'hertz_results':
+                            hertz_result = curve_result[1]
+                            if hertz_result is not None:
+                                row_dict = unpack_hertz_result(row_dict, hertz_result)
+                        elif result_type == 'ting_results':
+                            curve_indx = curve_result[0]
+                            ting_result = curve_result[1][0]
+                            hertz_result = curve_result[1][1]
+                            if ting_result is not None and hertz_result is not None:
+                                row_dict = unpack_hertz_result(row_dict, hertz_result)
+                                row_dict = unpack_ting_result(row_dict, ting_result)
+                        elif result_type == 'piezochar_results':
+                            curve_indx = curve_result[0]
+                            piezochar_result = curve_result[1]
+                            if piezochar_result is not None:
+                                row_dict = unpack_piezochar_result(row_dict, piezochar_result)
+                        elif result_type == 'vdrag_results':
+                            curve_indx = curve_result[0]
+                            vdrag_result = curve_result[1]
+                            if vdrag_result is not None:
+                                row_dict = unpack_vdrag_result(row_dict, vdrag_result)
+                        elif result_type == 'microrheo_results':
+                            curve_indx = curve_result[0]
+                            microrheo_result = curve_result[1]
+                            if microrheo_result is not None:
+                                row_dict = unpack_microrheo_result(row_dict, microrheo_result)
+                        
+                        tasker.results.append(row_dict)
+            
+            outputdf = pd.DataFrame(loaded_results)
+            outputdf.sort_values(by=['file_path'])
             output[result_type] = outputdf
+
     return output
 
 def export_results(results, dirname, file_prefix):

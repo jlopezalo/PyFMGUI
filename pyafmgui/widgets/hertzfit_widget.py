@@ -100,12 +100,22 @@ class HertzFitWidget(QtGui.QWidget):
             self.l2.addItem(self.plotItem)
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
-            self.correlogram.setImage(self.current_file.piezoimg)
-            shape = self.session.current_file.piezoimg.shape
-            rows, cols = shape[0], shape[1]
-            self.plotItem.setXRange(0, cols)
-            self.plotItem.setYRange(0, rows)
-            curve_coords = np.arange(cols*rows).reshape((cols, rows))
+            # create transform to center the corner element on the origin, for any assigned image:
+            if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
+                img = self.session.current_file.imagedata.get('Height(measured)', None)
+                if img is None:
+                    img = self.session.current_file.imagedata.get('Height', None)
+                img = np.rot90(np.fliplr(img))
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
+                curve_coords = np.rot90(np.fliplr(curve_coords))
+            elif self.session.current_file.filemetadata['file_type'] in cts.nanoscope_file_extensions:
+                img = self.session.current_file.piezoimg
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
+            self.correlogram.setImage(img)
             if self.current_file.filemetadata['file_type'] == "jpk-force-map":
                 curve_coords = np.asarray([row[::(-1)**i] for i, row in enumerate(curve_coords)])
             self.session.map_coords = curve_coords
@@ -120,6 +130,7 @@ class HertzFitWidget(QtGui.QWidget):
             self.update()
     
     def updateCombo(self):
+        self.combobox.clear()
         self.combobox.addItems(self.session.loaded_files.keys())
         index = self.combobox.findText(self.current_file.filemetadata['Entry_filename'], QtCore.Qt.MatchFlag.MatchContains)
         if index >= 0:
@@ -184,6 +195,7 @@ class HertzFitWidget(QtGui.QWidget):
                 if curve_indx == self.session.current_curve_index:
                     self.hertz_E = curve_hertz_result.E0
                     self.hertz_d0 = curve_hertz_result.delta0
+                    self.hertz_f0 = curve_hertz_result.f0
                     self.hertz_redchi = curve_hertz_result.redchi
                     self.fit_data = curve_hertz_result
 

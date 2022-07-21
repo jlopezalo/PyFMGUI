@@ -149,15 +149,23 @@ class DataViewerWidget(QtGui.QWidget):
 
         if self.session.current_file.isFV:
             self.l.addItem(self.plotItem)
-            self.plotItem.setTitle("Piezo Height (μm)")
             self.plotItem.setLabel('left', 'y pixels')
             self.plotItem.setLabel('bottom', 'x pixels')
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
             # create transform to center the corner element on the origin, for any assigned image:
-            self.correlogram.setImage(self.session.current_file.piezoimg * 1e6)
-            self.bar.setLevels((self.session.current_file.piezoimg.min() * 1e6, self.session.current_file.piezoimg.max() * 1e6))
-            shape = self.session.current_file.piezoimg.shape
+            if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
+                img = self.session.current_file.imagedata.get('Height(measured)', None)
+                self.plotItem.setTitle("Height(measured) (μm)")
+                if img is None:
+                    img = self.session.current_file.imagedata.get('Height', None)
+                    self.plotItem.setTitle("Height (μm)")
+            elif self.session.current_file.filemetadata['file_type'] in cts.nanoscope_file_extensions:
+                img = self.session.current_file.piezoimg
+                self.plotItem.setTitle("Piezo Height (μm)")
+            self.correlogram.setImage(img * 1e6)
+            self.bar.setLevels((img.min() * 1e6, img.max() * 1e6))
+            shape = img.shape
             rows, cols = shape[0], shape[1]
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)

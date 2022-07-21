@@ -76,11 +76,6 @@ def process_maps(session, params, filedict, method):
         # Define all curve indices
         curve_indices = list(range(nb_curves))
         # Process all curves in paralel
-        if platform.system() == "Darwin":
-            try:
-                multiprocessing.set_start_method('spawn')
-            except RuntimeError:
-                pass
         with mp.Parallelize(tasks=curve_indices, results=file_results, progressDialog=f'Processing File: {file_id}') as tasker:
             for idx in tasker:
                 try:
@@ -103,6 +98,11 @@ def process_maps(session, params, filedict, method):
 
 def compute(session, params, filedict, method):
     fv_flag = any(file.isFV for file in filedict.values())
+    if platform.system() == "Darwin":
+            try:
+                multiprocessing.set_start_method('spawn')
+            except RuntimeError:
+                pass
     if not params['compute_all_curves'] or not fv_flag:
         process_sfc(session, params, filedict, method)
     else:

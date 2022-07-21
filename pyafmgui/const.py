@@ -1,6 +1,7 @@
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 jpk_file_extensions = ('.jpk-force', '.jpk-force-map', '.jpk-qi-data')
+nanoscope_file_extensions = ('.spm', '.pfc')
 available_geometries = ['paraboloid', 'cone', 'pyramid']
 
 # Default parameters ##############################################
@@ -48,7 +49,7 @@ class HertzFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Window', 'type': 'int', 'value': 50},
+            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'points'},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
             {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
@@ -101,7 +102,7 @@ class TingFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Window', 'type': 'int', 'value': 50},
+            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'points'},
             {'name': 'Correct Viscous Drag', 'type': 'bool', 'value':False},
             {'name': 'Poly. Order', 'type': 'int', 'value':2},
             {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
@@ -113,7 +114,7 @@ class TingFitParams(pTypes.GroupParameter):
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init tc', 'type': 'float', 'value': 0, 'units':'s'},
             {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},
-            {'name': 'Viscous Drag', 'type': 'float', 'value': 0},
+            {'name': 'Viscous Drag', 'type': 'float', 'value': 0, 'units':'nN'},
             {'name': 'Init Fluid. Exp.', 'type': 'float', 'value': 0.20},
             {'name': 'Contact Offset', 'type': 'float', 'value': 1, 'units':'um'},
             {'name': 'Smoothing Window', 'type': 'int', 'value': 5, 'units':'points'}

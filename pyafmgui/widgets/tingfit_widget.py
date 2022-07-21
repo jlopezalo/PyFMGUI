@@ -97,8 +97,23 @@ class TingFitWidget(QtGui.QWidget):
             self.l2.addItem(self.plotItem)
             self.plotItem.addItem(self.ROI)
             self.plotItem.scene().sigMouseClicked.connect(self.mouseMoved)
-            self.correlogram.setImage(self.current_file.piezoimg)
-            shape = self.session.current_file.piezoimg.shape
+            # create transform to center the corner element on the origin, for any assigned image:
+            if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
+                img = self.session.current_file.imagedata.get('Height(measured)', None)
+                if img is None:
+                    img = self.session.current_file.imagedata.get('Height', None)
+                img = np.rot90(np.fliplr(img))
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
+                curve_coords = np.rot90(np.fliplr(curve_coords))
+            elif self.session.current_file.filemetadata['file_type'] in cts.nanoscope_file_extensions:
+                img = self.session.current_file.piezoimg
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
+            self.correlogram.setImage(img)
+            shape = img.shape
             rows, cols = shape[0], shape[1]
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
@@ -116,6 +131,7 @@ class TingFitWidget(QtGui.QWidget):
         self.update()
     
     def updateCombo(self):
+        self.combobox.clear()
         self.combobox.addItems(self.session.loaded_files.keys())
         index = self.combobox.findText(self.current_file.filemetadata['Entry_filename'], QtCore.Qt.MatchFlag.MatchContains)
         if index >= 0:
@@ -193,6 +209,7 @@ class TingFitWidget(QtGui.QWidget):
                     self.ting_exp = curve_ting_result.betaE
                     self.ting_tc = curve_ting_result.tc
                     self.ting_redchi = curve_ting_result.redchi
+                    self.ting_f0 = curve_ting_result.F0
                     self.hertz_E = curve_hertz_result.E0
                     self.hertz_d0 = curve_hertz_result.delta0
                     self.hertz_redchi = curve_hertz_result.redchi
@@ -235,7 +252,11 @@ class TingFitWidget(QtGui.QWidget):
         self.p2.plot(ind_fit - self.ting_d0, force_fit)
 
         if self.fit_data is not None:
-            self.p2.plot(ind_fit - self.ting_d0, self.fit_data.eval(time_fit, force_fit, ind_fit, t0=t0, idx_tm=idx_tm, smooth_w=smooth_w), pen ='g', name='Fit')
+            self.p2.plot(
+                ind_fit - self.ting_d0,
+                self.fit_data.eval(time_fit, force_fit, ind_fit, t0=t0, idx_tm=idx_tm, smooth_w=smooth_w),
+                pen ='g', name='Fit'
+            )
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')
