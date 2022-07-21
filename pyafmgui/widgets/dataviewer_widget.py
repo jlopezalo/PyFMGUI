@@ -160,9 +160,17 @@ class DataViewerWidget(QtGui.QWidget):
                 if img is None:
                     img = self.session.current_file.imagedata.get('Height', None)
                     self.plotItem.setTitle("Height (μm)")
+                img = np.rot90(np.fliplr(img))
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
+                curve_coords = np.rot90(np.fliplr(curve_coords))
             elif self.session.current_file.filemetadata['file_type'] in cts.nanoscope_file_extensions:
                 img = self.session.current_file.piezoimg
                 self.plotItem.setTitle("Piezo Height (μm)")
+                shape = img.shape
+                rows, cols = shape[0], shape[1]
+                curve_coords = np.arange(cols*rows).reshape((cols, rows))
             self.correlogram.setImage(img * 1e6)
             self.bar.setLevels((img.min() * 1e6, img.max() * 1e6))
             shape = img.shape
