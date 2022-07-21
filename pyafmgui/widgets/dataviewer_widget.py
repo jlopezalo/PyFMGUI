@@ -173,11 +173,8 @@ class DataViewerWidget(QtGui.QWidget):
                 curve_coords = np.arange(cols*rows).reshape((cols, rows))
             self.correlogram.setImage(img * 1e6)
             self.bar.setLevels((img.min() * 1e6, img.max() * 1e6))
-            shape = img.shape
-            rows, cols = shape[0], shape[1]
             self.plotItem.setXRange(0, cols)
             self.plotItem.setYRange(0, rows)
-            curve_coords = np.arange(cols*rows).reshape((cols, rows))
             if self.session.current_file.filemetadata['file_type'] == "jpk-force-map":
                 curve_coords = np.asarray([row[::(-1)**i] for i, row in enumerate(curve_coords)])
             self.session.map_coords = curve_coords
