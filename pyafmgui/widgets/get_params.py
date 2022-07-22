@@ -40,6 +40,7 @@ def get_params(params, method):
         param_dict['vdragcorr'] = ting_params.child('Correct Viscous Drag').value()
         param_dict['polyordr'] = ting_params.child('Poly. Order').value()
         param_dict['rampspeed'] = ting_params.child('Ramp Speed').value() / 1e6 #um/s
+        param_dict['compute_v_flag'] = ting_params.child('Estimate V0t & V0r').value()
         param_dict['t0'] = ting_params.child('t0').value()
         param_dict['d0'] = ting_params.child('Init d0').value() / 1e9 
         param_dict['slope'] = ting_params.child('Init Slope').value()

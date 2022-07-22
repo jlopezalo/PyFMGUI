@@ -189,6 +189,7 @@ class TingFitWidget(QtGui.QWidget):
         contact_offset = ting_params.child('Contact Offset').value() / 1e6
         t0 = ting_params.child('t0').value()
         smooth_w = ting_params.child('Smoothing Window').value()
+        compute_v_flag = ting_params.child('Estimate V0t & V0r').value()
 
         force_curve = current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)

@@ -9,6 +9,14 @@ def do_ting_fit(fdc, param_dict):
     ext_data = fdc.extend_segments[0][1]
     ret_data = fdc.retract_segments[-1][1]
 
+    # Check time offset
+    t_offset = np.abs(ext_data.zheight[-1] - ret_data.zheight[0]) / (ext_data.velocity * -1e-9)
+    dt = ext_data.time[0] - ext_data.time[1]
+
+    print(t_offset)
+    print(dt)
+
+
     # Find PoC on the extend segment via RoV method
     ext_zheight = ext_data.zheight
     ext_deflection = ext_data.vdeflection
@@ -65,7 +73,13 @@ def do_ting_fit(fdc, param_dict):
     # Get index of tm, tm and the intial guess of tc
     idx_tm = np.argmax(force_fit)
     tm = time_fit[idx_tm]
-    tc = tm/3
+    tc = tm/2
+
+    if not param_dict['compute_v_flag']:
+        v0t = ext_data.velocity * -1e-9
+        v0r = ret_data.velocity * -1e-9
+    else:
+        v0t, v0r = None, None
 
     # Perform TingFit
     ting_model = TingModel(param_dict['contact_model'], param_dict['tip_param'], param_dict['model_type'])
@@ -75,7 +89,10 @@ def do_ting_fit(fdc, param_dict):
     ting_model.f0_init = param_dict['f0']
     ting_model.vdrag = param_dict['vdrag']
     ting_model.poisson =  param_dict['poisson']
-    ting_model.fit(time_fit, force_fit, ind_fit, t0=param_dict['t0'], idx_tm=idx_tm, smooth_w=param_dict['smoothing_win'])
+    ting_model.fit(
+        time_fit, force_fit, ind_fit, t0=param_dict['t0'], idx_tm=idx_tm,
+        smooth_w=param_dict['smoothing_win'], v0t=v0t, v0r=v0r
+    )
 
     # Return the results of the TingFit and HertzFit
     return ting_model, hertz_model

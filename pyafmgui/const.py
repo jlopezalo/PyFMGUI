@@ -107,6 +107,7 @@ class TingFitParams(pTypes.GroupParameter):
             {'name': 'Poly. Order', 'type': 'int', 'value':2},
             {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
             {'name': 'Model Type', 'type': 'list', 'limits': ['analytical', 'numerical']},
+            {'name': 'Estimate V0t & V0r', 'type': 'bool', 'value': False},
             {'name': 't0', 'type': 'int', 'value': 1, 'units':'s'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
             {'name': 'Init Slope', 'type': 'float', 'value': 0},
