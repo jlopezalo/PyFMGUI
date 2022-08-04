@@ -1,8 +1,14 @@
 import pyqtgraph.parametertree.parameterTypes as pTypes
+from .canti_list import canti_list
 
 jpk_file_extensions = ('.jpk-force', '.jpk-force-map', '.jpk-qi-data')
 nanoscope_file_extensions = ('.spm', '.pfc')
 available_geometries = ['paraboloid', 'cone', 'pyramid']
+
+# SADER API params ################################################
+SADER_API_version = 'Python API/0.20'
+SADER_API_type = 'text/xml'
+SADER_API_url = 'https://sadermethod.org/api/1.1/api.php'
 
 # Default parameters ##############################################
 
@@ -18,7 +24,8 @@ class AnalysisParams(pTypes.GroupParameter):
             {'name': 'Tip Angle', 'type': 'float', 'value': 35, 'units':'°'},
             {'name': 'Tip Radius', 'type': 'float', 'value': 75, 'units':'nm'},
             {'name': 'Tip Area', 'type': 'float', 'value': None},
-            {'name': 'Curve Segment', 'type': 'list', 'limits':['extend', 'retract']}
+            {'name': 'Curve Segment', 'type': 'list', 'limits':['extend', 'retract']},
+            {'name': 'Correct Tilt', 'type': 'bool', 'value':False}
         ])
 
         if self.mode == "microrheo":
@@ -49,7 +56,7 @@ class HertzFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'points'},
+            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'nm'},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
             {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
@@ -102,7 +109,7 @@ class TingFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'points'},
+            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'nm'},
             {'name': 'Correct Viscous Drag', 'type': 'bool', 'value':False},
             {'name': 'Poly. Order', 'type': 'int', 'value':2},
             {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
@@ -115,7 +122,7 @@ class TingFitParams(pTypes.GroupParameter):
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init tc', 'type': 'float', 'value': 0, 'units':'s'},
             {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},
-            {'name': 'Viscous Drag', 'type': 'float', 'value': 0, 'units':'nN'},
+            {'name': 'Viscous Drag', 'type': 'float', 'value': 0, 'units':'pN/nm·s'},
             {'name': 'Init Fluid. Exp.', 'type': 'float', 'value': 0.20},
             {'name': 'Contact Offset', 'type': 'float', 'value': 1, 'units':'um'},
             {'name': 'Smoothing Window', 'type': 'int', 'value': 5, 'units':'points'}
@@ -146,6 +153,30 @@ class TingFitParams(pTypes.GroupParameter):
             self.param('Poly. Order').show(False)
             self.param('Ramp Speed').show(False)
 
+class CantileverParams(pTypes.GroupParameter):
+    def __init__(self, **opts):
+        pTypes.GroupParameter.__init__(self, **opts)
+        self.addChildren([
+            {'name': 'Canti Id', 'type': 'list', 'limits': list(canti_list.keys())},
+            {'name': 'Canti Shape', 'type': 'list', 'limits': ['Rectangular', 'V Shape']},
+            {'name': 'Lenght', 'type': 'float', 'value': 0, 'units':'um'},
+            {'name': 'Width', 'type': 'float', 'value': 0, 'units':'um'},
+            {'name': 'Width Legs', 'type': 'float', 'value': 0, 'units':'um'}
+        ])
+
+        self.cani_id = self.param('Canti Id')
+        self.cani_id.sigValueChanged.connect(self.canti_id_changed)
+
+        self.canti_id_changed()
+        
+    def canti_id_changed(self):
+        canti_data = canti_list.get(self.cani_id.value())
+        self.param('Canti Shape').setValue(canti_data['cantType'])
+        self.param('Lenght').setValue(canti_data['CantileverLength'])
+        self.param('Width').setValue(canti_data['CantileverWidth'])
+        self.param('Width Legs').setValue(canti_data['CantileverWidthLegs'])
+
+
 general_params = {'name': 'General Options', 'type': 'group', 'children': [
         {'name': 'Compute All Curves', 'type': 'bool', 'value': True},
         {'name': 'Compute All Files', 'type': 'bool', 'value': False}
@@ -174,25 +205,16 @@ ambient_params = {'name': 'Ambient Params', 'type': 'group', 'children': [
         {'name': 'Rel. Humidity', 'type': 'float', 'value': 68, 'units':'%'}
     ]}
 
-cantilever_params = {'name': 'Cantilever Params', 'type': 'group', 'children': [
-        {'name': 'Canti Shape', 'type': 'list', 'limits': ['Rectangular', 'V Shape']},
-        {'name': 'Lenght', 'type': 'float', 'value': None, 'units':'um'},
-        {'name': 'Width', 'type': 'float', 'value': None, 'units':'um'},
-        {'name': 'Width Legs', 'type': 'float', 'value': None, 'units':'um'}
-    ]}
-
 sader_method_params = {'name': 'Calibration Params', 'type': 'group', 'children': [
         {'name': 'Model', 'type': 'str', 'value': 'SHO', 'readonly':True},
-        {'name': 'Sader API User', 'type': 'str', 'value': None},
-        {'name': 'Sader API Password', 'type': 'str', 'value': None},
-        {'name': 'Cantilever Code', 'type': 'str', 'value': None}
+        {'name': 'Cantilever Code', 'type': 'list', 'limits': []}
     ]}
 
 data_viewer_params = [plot_params]
 
 hertzfit_params = [general_params, AnalysisParams(mode='hertzfit', name='Analysis Params'), HertzFitParams(name='Hertz Fit Params')]
 
-thermaltune_params = [ambient_params, cantilever_params, sader_method_params]
+thermaltune_params = [ambient_params, CantileverParams(name='Cantilever Params'), sader_method_params]
 
 tingfit_params = [general_params, AnalysisParams(mode='tingfit', name='Analysis Params'), TingFitParams(name='Ting Fit Params')]
 

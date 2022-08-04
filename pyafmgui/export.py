@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 
 import pyqtgraph.multiprocess as mp
 
@@ -75,7 +76,7 @@ def unpack_microrheo_result(row_dict, microrheo_result):
     row_dict['frequency'] = microrheo_result[0]
     row_dict['G_storage'] = microrheo_result[1]
     row_dict['G_loss'] = microrheo_result[2]
-    row_dict['losstan'] = row_dict['G_storage'] / row_dict['G_loss']
+    row_dict['losstan'] = np.array(row_dict['G_storage']) / np.array(row_dict['G_loss'])
     return row_dict
 
 def prepare_export_results(session):
@@ -146,6 +147,12 @@ def prepare_export_results(session):
                         tasker.results.append(row_dict)
             
             outputdf = pd.DataFrame(loaded_results)
+            if result_type == 'piezochar_results':
+                outputdf = outputdf.explode(['frequency', 'fi_degrees', 'amp_quot'])
+            elif result_type == 'vdrag_results':
+                outputdf = outputdf.explode(['frequency', 'Bh', 'Hd_real', 'Hd_imag', 'distances'])
+            elif result_type == 'microrheo_results':
+                outputdf = outputdf.explode(['frequency', 'G_storage', 'G_loss', 'losstan'])
             outputdf.sort_values(by=['file_path'])
             output[result_type] = outputdf
 

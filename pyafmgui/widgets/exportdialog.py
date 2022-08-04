@@ -2,8 +2,6 @@ import PyQt5
 from pyqtgraph.Qt import QtWidgets, QtCore, QtGui
 from pyqtgraph import TableWidget
 
-import numpy as np
-
 from pyafmgui.export import result_types, prepare_export_results, export_results
 
 class ExportDialog(QtGui.QWidget):

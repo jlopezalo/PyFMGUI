@@ -1,5 +1,4 @@
 import os
-from unicodedata import name
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -129,7 +128,7 @@ class MicrorheoWidget(QtGui.QWidget):
             self.session.piezo_char_file_path = fname
             self.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
             piezo_char_data = pd.read_csv(self.session.piezo_char_file_path)
-            self.session.piezo_char_data = piezo_char_data.groupby('freqs', as_index=False).median()
+            self.session.piezo_char_data = piezo_char_data.groupby('frequency', as_index=False).median()
             if self.session.vdrag_widget:
                 self.session.vdrag_widget.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
         else:
@@ -201,6 +200,12 @@ class MicrorheoWidget(QtGui.QWidget):
     def manual_override(self):
         pass
 
+    def open_msg_box(self, message):
+        dlg = QtWidgets.QMessageBox(self)
+        dlg.setWindowTitle("Export Status")
+        dlg.setText(message)
+        dlg.exec()
+
     def updatePlots(self):
 
         if not self.current_file:
@@ -238,6 +243,7 @@ class MicrorheoWidget(QtGui.QWidget):
         modulation_segs = force_curve.modulation_segments
 
         if modulation_segs == []:
+            self.open_msg_box(f'No modulation segments found in file:\n {current_file_id}')
             return
 
         microrheo_result = self.session.microrheo_results.get(current_file_id, None)

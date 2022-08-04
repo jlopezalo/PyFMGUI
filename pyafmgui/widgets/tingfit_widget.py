@@ -234,7 +234,7 @@ class TingFitWidget(QtGui.QWidget):
         if vdragcorr:
             ext_data.force, ret_data.force = correct_viscous_drag(
                 ext_data.indentation, ext_data.force, ret_data.indentation, ret_data.force, poly_order=polyordr, speed=rampspeed)
-        self.p1.plot(ext_data.indentation, ext_data.force)
+        p1 = self.p1.plot(ext_data.indentation, ext_data.force)
         self.p1.plot(ret_data.indentation, ret_data.force)
         indentation = np.r_[ext_data.indentation, ret_data.indentation]
         force = np.r_[ext_data.force, ret_data.force]
@@ -250,6 +250,13 @@ class TingFitWidget(QtGui.QWidget):
         if self.ting_tc:
             ting_d0_idx = int((np.abs(np.array(time_fit) - self.ting_tc)).argmin())
             self.ting_d0 = ind_fit[ting_d0_idx]
+        
+        self.tilt_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w')
+        self.tilt_roi.setZValue(10)
+        self.p1.addItem(self.tilt_roi, ignoreBounds=True)
+        self.tilt_roi.setClipItem(p1)
+        self.tilt_roi.setRegion([-10e-9, -1e-6])
+
         self.p2.plot(ind_fit - self.ting_d0, force_fit)
 
         if self.fit_data is not None:

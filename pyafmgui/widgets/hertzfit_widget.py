@@ -227,12 +227,19 @@ class HertzFitWidget(QtGui.QWidget):
             self.force = ret_data.force
             self.force = self.force - self.force[-1]
 
-        self.p1.plot(self.indentation, self.force)
+        p1 = self.p1.plot(self.indentation, self.force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
             d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})
             self.p1.addItem(d0_vertical_line, ignoreBounds=True)
+        
+        self.tilt_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w')
+        self.tilt_roi.setZValue(10)
+        self.p1.addItem(self.tilt_roi, ignoreBounds=True)
+        self.tilt_roi.setClipItem(p1)
+        self.tilt_roi.setRegion([-10e-9, -1e-6])
+
         self.p2.plot(self.indentation - self.hertz_d0, self.force)
 
         self.update_fit_range()

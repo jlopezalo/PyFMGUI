@@ -4,7 +4,6 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 from pyafmgui.loadfiles import loadfiles
 
-from pyafmgui.widgets.customdialog import CustomDialog
 from pyafmgui.widgets.exportdialog import ExportDialog
 from pyafmgui.widgets.hertzfit_widget import HertzFitWidget
 from pyafmgui.widgets.tingfit_widget import TingFitWidget
@@ -95,22 +94,47 @@ class MainWindow(QtWidgets.QMainWindow):
 	def open_analysis_window(self):
 		widget_to_open = None
 		action = self.sender().text()
-		if action == "Data Viewer" and self.session.data_viewer_widget is None:
-			widget_to_open = DataViewerWidget(self.session)
-		elif action == "Thermal Tune" and self.session.thermal_tune_widget is None:
-			widget_to_open = ThermalTuneWidget(self.session)
-		elif action == "Elasticity Fit" and self.session.hertz_fit_widget is None:
-			widget_to_open = HertzFitWidget(self.session)
-		elif action == "Viscoelasticity Fit" and self.session.ting_fit_widget is None:
-			widget_to_open = TingFitWidget(self.session)
-		elif action == "Piezo Characterization" and self.session.piezo_char_widget is None:
-			widget_to_open = PiezoCharWidget(self.session)
-		elif action == "Viscous Drag" and self.session.vdrag_widget is None:
-			widget_to_open = VDragWidget(self.session)
-		elif action == "Microrheology" and self.session.microrheo_widget is None:
-			widget_to_open = MicrorheoWidget(self.session)
+		if action == "Data Viewer":
+			if self.session.data_viewer_widget is None:
+				widget_to_open = DataViewerWidget(self.session)
+			else:
+				self.session.data_viewer_widget.showMaximized()
+		elif action == "Thermal Tune":
+			if self.session.thermal_tune_widget is None:
+				widget_to_open = ThermalTuneWidget(self.session)
+			else:
+				self.session.thermal_tune_widget.showMaximized()
+		elif action == "Elasticity Fit":
+			if self.session.hertz_fit_widget is None:
+				widget_to_open = HertzFitWidget(self.session)
+			else:
+				self.session.hertz_fit_widget.showMaximized()
+		elif action == "Viscoelasticity Fit":
+			if self.session.ting_fit_widget is None:
+				widget_to_open = TingFitWidget(self.session)
+			else:
+				self.session.ting_fit_widget.showMaximized()
+		elif action == "Piezo Characterization":
+			if self.session.piezo_char_widget is None:
+				widget_to_open = PiezoCharWidget(self.session)
+			else:
+				self.session.piezo_char_widget.showMaximized()
+		elif action == "Viscous Drag":
+			if self.session.vdrag_widget is None:
+				widget_to_open = VDragWidget(self.session)
+			else:
+				self.session.vdrag_widget.showMaximized()
+		elif action == "Microrheology":
+			if self.session.microrheo_widget is None:
+				widget_to_open = MicrorheoWidget(self.session)
+			else:
+				self.session.microrheo_widget.showMaximized()
 		elif action == "Macrowidget":
-			widget_to_open = MacroWidget(self.session)
+			if self.session.macro_widget is None:
+				widget_to_open = MacroWidget(self.session)
+			else:
+				self.session.macro_widget.showMaximized()
+		
 		if widget_to_open is not None:
 			self.add_subwindow(widget_to_open, action)
 			

@@ -91,6 +91,12 @@ class PiezoCharWidget(QtGui.QWidget):
         params = get_params(self.params, 'PiezoChar')
         compute(self.session, params, self.filedict, 'PiezoChar')
         self.updatePlots()
+    
+    def open_msg_box(self, message):
+        dlg = QtWidgets.QMessageBox(self)
+        dlg.setWindowTitle("Export Status")
+        dlg.setText(message)
+        dlg.exec()
 
     def update(self):
         self.current_file = self.session.current_file
@@ -189,6 +195,7 @@ class PiezoCharWidget(QtGui.QWidget):
         modulation_segs = force_curve.modulation_segments
 
         if modulation_segs == []:
+            self.open_msg_box(f'No modulation segments found in file:\n {current_file_id}')
             return
 
         piezo_char_result = self.session.piezo_char_results.get(current_file_id, None)

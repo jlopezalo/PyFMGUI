@@ -20,8 +20,11 @@ class Session:
         self.piezo_char_widget = None
         self.vdrag_widget = None
         self.microrheo_widget = None
+        self.macro_widget = None
         self.piezo_char_data = None
         self.piezo_char_file_path = None
+        self.sader_username = ""
+        self.sader_password = ""
     
     def remove_results(self):
         self.loaded_files_paths = []

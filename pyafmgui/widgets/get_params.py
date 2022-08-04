@@ -21,6 +21,7 @@ def get_params(params, method):
     if method  in ("HertzFit", "Microrheo", "MicrorheoSine"):
         hertz_params = params.child('Hertz Fit Params')
         param_dict['poisson'] = hertz_params.child('Poisson Ratio').value()
+        # param_dict['poc_win'] = hertz_params.child('PoC Window').value() / 1e9 #nm
         param_dict['poc_win'] = hertz_params.child('PoC Window').value()
         param_dict['auto_init_E0'] = hertz_params.child('Auto Init E0').value()
         param_dict['E0'] = hertz_params.child('Init E0').value()
@@ -36,6 +37,7 @@ def get_params(params, method):
     elif method == "TingFit":
         ting_params = params.child('Ting Fit Params')
         param_dict['poisson'] = ting_params.child('Poisson Ratio').value()
+        # param_dict['poc_win'] = ting_params.child('PoC Window').value() / 1e9 #nm
         param_dict['poc_win'] = ting_params.child('PoC Window').value()
         param_dict['vdragcorr'] = ting_params.child('Correct Viscous Drag').value()
         param_dict['polyordr'] = ting_params.child('Poly. Order').value()
@@ -49,7 +51,7 @@ def get_params(params, method):
         param_dict['tc'] = ting_params.child('Init tc').value()
         param_dict['fluid_exp'] = ting_params.child('Init Fluid. Exp.').value()
         param_dict['f0'] = ting_params.child('Init f0').value() / 1e9 #nN
-        param_dict['vdrag'] = ting_params.child('Viscous Drag').value() / 1e9 #nN
+        param_dict['vdrag'] = ting_params.child('Viscous Drag').value() / 1e3 #N/m·s
         param_dict['model_type'] = ting_params.child('Model Type').value()
         param_dict['smoothing_win'] = ting_params.child('Smoothing Window').value()
         param_dict['contact_offset'] = ting_params.child('Contact Offset').value() / 1e6 #um

@@ -3,10 +3,32 @@ import os
 import numpy as np
 import pandas as pd
 import re
+import requests
+import xml.etree.ElementTree as etree
 import matplotlib.pyplot as plt
 from scipy.special import kv
 from lmfit import Model, Parameters
-from pyafmgui.helpers.Sader_GCI_demo import SaderGCI_CalculateK
+import pyafmgui.const as cts
+
+def SaderGCI_CalculateK(UserName, Password, LeverNumber, Frequency, QFactor):
+    payload = '''<?xml version="1.0" encoding="UTF-8" ?>
+    <saderrequest>
+        <username>'''+UserName+'''</username>
+        <password>'''+Password+'''</password>
+        <operation>UPLOAD</operation>
+        <cantilever>
+            <id>data_'''+str(LeverNumber)+'''</id>
+            <frequency>'''+str(Frequency)+'''</frequency>
+            <quality>'''+str(QFactor)+'''</quality>
+        </cantilever>
+    </saderrequest>'''
+    headers = {'user-agent': cts.SADER_API_version, 'Content-type': cts.SADER_API_type}
+    r = requests.post(cts.SADER_API_url, data=payload, headers=headers)
+    doc = etree.fromstring(r.content)
+    if (doc.find('./status/code').text == 'OK'):
+        print ("Sader GCI Spring Constant = "+doc.find('./cantilever/k_sader').text+', 95% C.I. Error = '+doc.find('./cantilever/percent').text+'% from '+doc.find('./cantilever/samples').text+' samples.')
+        # Added return statement for the GCI Spring Constant
+        return float(doc.find('./cantilever/k_sader').text)
 
 def get_K_Classic(fR, Q, A1, temperature):
     BoltzmannConst = 1.38065e-23
@@ -83,7 +105,6 @@ def Stark_Chi_force_constant(b, L, d, A1, fR1, Q1, Tc, RH, medium, cantType, use
     if username != "" and pwd != "" and selectedCantCode != "":
         print(selectedCantCode)
         # SaderGCI_CalculateK( UserName, Password, LeverNumber, Frequency, QFactor)
-        # SaderGCI_GetLeverList(username, pwd)
         GCI_cant_springConst=SaderGCI_CalculateK(username, pwd, selectedCantCode, fR1/1e3, Q1)
     else:
         GCI_cant_springConst=np.NaN

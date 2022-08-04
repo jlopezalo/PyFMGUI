@@ -1,10 +1,13 @@
 import os
 import numpy as np
+import requests
+import xml.etree.ElementTree as etree
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
+from pyafmreader import loadfile
 import pyafmgui.const as cts
 from pyafmgui.helpers.thermal_utils import *
 
@@ -25,6 +28,7 @@ class ThermalTuneWidget(QtGui.QWidget):
         self.GCI_cant_springConst = None
         self.involsValue = None
         self.invOLS_H = None
+        self.sader_canti_list = {}
         self.init_gui()
 
     def init_gui(self):
@@ -38,7 +42,7 @@ class ThermalTuneWidget(QtGui.QWidget):
         air_thermal_label = QtWidgets.QLabel("Air Thermal File")
         air_thermal_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
         air_thermal_label.setMaximumWidth(150)
-        self.air_thermal_text = QtWidgets.QTextEdit()
+        self.air_thermal_text = QtWidgets.QLineEdit()
         self.air_thermal_text.setMaximumHeight(40)
         air_thermal_browse_bttn = QtWidgets.QPushButton()
         air_thermal_browse_bttn.setText("Browse")
@@ -47,7 +51,7 @@ class ThermalTuneWidget(QtGui.QWidget):
         lq_thermal_label = QtWidgets.QLabel("Liquid Thermal File")
         lq_thermal_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
         lq_thermal_label.setMaximumWidth(150)
-        self.lq_thermal_text = QtWidgets.QTextEdit()
+        self.lq_thermal_text = QtWidgets.QLineEdit()
         self.lq_thermal_text.setMaximumHeight(40)
         lq_thermal_browse_bttn = QtWidgets.QPushButton()
         lq_thermal_browse_bttn.setText("Browse")
@@ -59,6 +63,28 @@ class ThermalTuneWidget(QtGui.QWidget):
         file_select_layout.addWidget(lq_thermal_label, 2, 0, 1, 1)
         file_select_layout.addWidget(self.lq_thermal_text, 2, 1, 1, 2)
         file_select_layout.addWidget(lq_thermal_browse_bttn, 3, 2, 1, 1)
+
+        login_layout = QtWidgets.QGridLayout()
+        user_name_label = QtWidgets.QLabel("SADER Username")
+        user_name_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        user_name_label.setMaximumWidth(150)
+        self.user_name_text = QtWidgets.QLineEdit()
+        self.user_name_text.setMaximumHeight(40)
+        user_pwd_label = QtWidgets.QLabel("SADER Password")
+        user_pwd_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        user_pwd_label.setMaximumWidth(150)
+        self.user_pwd_text = QtWidgets.QLineEdit()
+        self.user_pwd_text.setMaximumHeight(40)
+        self.user_pwd_text.setEchoMode(QtGui.QLineEdit.Password)
+        login_bttn = QtWidgets.QPushButton()
+        login_bttn.setText("Login")
+        login_bttn.clicked.connect(self.sader_login)
+
+        login_layout.addWidget(user_name_label, 0, 0, 1, 1)
+        login_layout.addWidget(self.user_name_text, 0, 1, 1, 2)
+        login_layout.addWidget(user_pwd_label, 1, 0, 1, 1)
+        login_layout.addWidget(self.user_pwd_text, 1, 1, 1, 2)
+        login_layout.addWidget(login_bttn, 2, 2, 1, 1)
 
         self.params = Parameter.create(name='params', children=cts.thermaltune_params)
 
@@ -72,6 +98,7 @@ class ThermalTuneWidget(QtGui.QWidget):
         self.l2 = pg.GraphicsLayoutWidget()
 
         params_layout.addLayout(file_select_layout, 2)
+        params_layout.addLayout(login_layout, 2)
         params_layout.addWidget(self.paramTree, 2)
         params_layout.addWidget(self.pushButton, 1)
         params_layout.addWidget(self.l2, 2)
@@ -96,7 +123,7 @@ class ThermalTuneWidget(QtGui.QWidget):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
         	self, 'Open file', './', "Thermal files (*.tnd)"
         )
-        return loadThermal(fname), os.path.basename(fname)  if fname != "" else (None, None)
+        return loadfile(fname), os.path.basename(fname)  if fname != "" else (None, None)
 
     def load_air_data(self):
         data, fname = self.load_data()
@@ -168,9 +195,50 @@ class ThermalTuneWidget(QtGui.QWidget):
         self.cantiLen = canti_params.child('Lenght').value() / 1e6
         self.cantiWidthLegs = canti_params.child('Width Legs').value() / 1e6
         cal_params = self.params.child('Calibration Params')
-        self.username = cal_params.child('Sader API User').value()
-        self.pwd = cal_params.child('Sader API Password').value()
-        self.selectedCantCode = cal_params.child('Cantilever Code').value()
+        self.selectedCantId = cal_params.child('Cantilever Code').value()
+        self.selectedCantCode = self.sader_canti_list.get(self.selectedCantId, "")
+    
+    def SaderGCI_GetLeverList(self):
+        payload = '''<?xml version="1.0" encoding="UTF-8" ?>
+        <saderrequest>
+        <username>'''+self.session.sader_username+'''</username>
+        <password>'''+self.session.sader_password+'''</password>
+        <operation>LIST</operation>
+        </saderrequest>'''
+        headers = {'user-agent': cts.SADER_API_version, 'Content-type': cts.SADER_API_type}
+        r = requests.post(cts.SADER_API_url, data=payload, headers=headers)
+        doc = etree.fromstring(r.content)
+        
+        cantilever_ids = doc.findall('./cantilevers/cantilever/id')
+        cantilever_labels = doc.findall('./cantilevers/cantilever/label')
+
+        canti_ids = {}
+
+        for a in range(len(cantilever_ids)):
+            canti_lbl = cantilever_labels[a].text
+            canti_id  = cantilever_ids[a].text.replace('data_','')
+            canti_ids[canti_lbl] = canti_id
+        
+        return canti_ids
+    
+    def open_msg_box(self, message):
+        dlg = QtWidgets.QMessageBox(self)
+        dlg.setWindowTitle("Login Status")
+        dlg.setText(message)
+        dlg.exec()
+    
+    def sader_login(self):
+        self.session.sader_username = self.user_name_text.text()
+        self.session.sader_password = self.user_pwd_text.text()
+        try:
+            self.sader_canti_list = self.SaderGCI_GetLeverList()
+            if self.sader_canti_list == {}:
+                self.open_msg_box("Could not Login!")
+                return
+            self.params.child('Calibration Params').child('Cantilever Code').setLimits(list(self.sader_canti_list.keys()))
+            self.open_msg_box("Login was successful!")
+        except requests.exceptions.RequestException:
+            self.open_msg_box("Could not Login!")
     
     def do_thermalfit(self):
         # Air
@@ -192,7 +260,7 @@ class ThermalTuneWidget(QtGui.QWidget):
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
                         A1_air, fR1_air, Q1_air, self.Tc, self.RH, 'air',
-                        self.cantType, self.username, self.pwd, self.selectedCantCode
+                        self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
                     )
         # Liquid
         if self.inliquid_thermal_ampl is not None and self.inliquid_thermal_freq is not None:
@@ -212,6 +280,6 @@ class ThermalTuneWidget(QtGui.QWidget):
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
                         A1_lq, fR1_lq, Q1_lq, self.Tc, self.RH, 'water', 
-                        self.cantType, self.username, self.pwd, self.selectedCantCode
+                        self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
                     )
         self.update_plot()

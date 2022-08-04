@@ -9,14 +9,6 @@ def do_ting_fit(fdc, param_dict):
     ext_data = fdc.extend_segments[0][1]
     ret_data = fdc.retract_segments[-1][1]
 
-    # Check time offset
-    t_offset = np.abs(ext_data.zheight[-1] - ret_data.zheight[0]) / (ext_data.velocity * -1e-9)
-    dt = ext_data.time[0] - ext_data.time[1]
-
-    print(t_offset)
-    print(dt)
-
-
     # Find PoC on the extend segment via RoV method
     ext_zheight = ext_data.zheight
     ext_deflection = ext_data.vdeflection
@@ -51,6 +43,12 @@ def do_ting_fit(fdc, param_dict):
     ret_indentation = ret_data.indentation
     ret_force = ret_data.force
     ret_time = ret_data.time
+    
+    # Check time offset
+    t_offset = np.abs(ext_data.zheight[-1] - ret_data.zheight[0]) / (ext_data.velocity * -1e-9)
+    dt = np.abs(ext_data.time[1] - ext_data.time[0])
+    if t_offset > 2*dt:
+        ret_time = ret_time + t_offset
 
     # Correct for viscous drag by fitting a line on the
     # extend and retract base liness.

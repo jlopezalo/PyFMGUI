@@ -231,6 +231,7 @@ class MacroWidget(QtGui.QWidget):
     def __init__(self, session):
         QtGui.QWidget.__init__(self)
         self.session = session
+        self.session.macro_widget = self
         self.layout = QtWidgets.QVBoxLayout()
         self.layout_2 = QtWidgets.QHBoxLayout()
         self.layout_3 = QtWidgets.QHBoxLayout()
