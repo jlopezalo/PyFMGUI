@@ -12,7 +12,13 @@ def do_ting_fit(fdc, param_dict):
     # Find PoC on the extend segment via RoV method
     ext_zheight = ext_data.zheight
     ext_deflection = ext_data.vdeflection
-    rov_PoC = get_poc_RoV_method(ext_zheight, ext_deflection, win_size=param_dict['poc_win'])
+    
+    z = ext_zheight
+    deltaz=np.abs(z.max()-z.min())
+    zperpt=deltaz/len(z)
+    win_size=int(param_dict['poc_win']/2/zperpt)*2
+
+    rov_PoC = get_poc_RoV_method(ext_zheight, ext_deflection, win_size)
     poc = [rov_PoC[0], 0]
 
     # Compute force and indentation

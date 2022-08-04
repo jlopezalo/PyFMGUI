@@ -178,7 +178,7 @@ class HertzFitWidget(QtGui.QWidget):
         spring_k = analysis_params.child('Spring Constant').value()
         curve_seg = analysis_params.child('Curve Segment').value()
         hertz_params = self.params.child('Hertz Fit Params')
-        poc_win = hertz_params.child('PoC Window').value()
+        poc_win = hertz_params.child('PoC Window').value() / 1e9
 
         force_curve = current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
@@ -213,7 +213,7 @@ class HertzFitWidget(QtGui.QWidget):
             zheight  = ret_data.zheight[::-1]
             vdeflect = ret_data.vdeflection[::-1]
         
-        rov_PoC = get_poc_RoV_method(zheight, vdeflect, win_size=poc_win)
+        rov_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
         poc = [rov_PoC[0], 0]
         force_curve.get_force_vs_indentation(poc, spring_k)
 

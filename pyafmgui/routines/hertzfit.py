@@ -11,7 +11,7 @@ def do_hertz_fit(fdc, param_dict):
         segment_data.zheight = segment_data.zheight[::-1]
         segment_data.vdeflection = segment_data.vdeflection[::-1]
     rov_PoC = get_poc_RoV_method(
-        segment_data.zheight, segment_data.vdeflection, win_size=param_dict['poc_win'])
+        segment_data.zheight, segment_data.vdeflection, param_dict['poc_win'])
     poc = [rov_PoC[0], 0]
     segment_data.get_force_vs_indentation(poc, param_dict['k'])
     indentation = segment_data.indentation

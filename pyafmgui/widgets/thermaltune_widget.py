@@ -8,8 +8,10 @@ import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from pyafmreader import loadfile
+from pyafmrheo.models.calibration import Stark_Chi_force_constant
+from pyafmrheo.models.sho import SHOModel
+
 import pyafmgui.const as cts
-from pyafmgui.helpers.thermal_utils import *
 
 class ThermalTuneWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -123,15 +125,15 @@ class ThermalTuneWidget(QtGui.QWidget):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
         	self, 'Open file', './', "Thermal files (*.tnd)"
         )
-        return loadfile(fname), os.path.basename(fname)  if fname != "" else (None, None)
+        return loadfile(fname), os.path.basename(fname) if fname != "" else (None, None)
 
     def load_air_data(self):
         data, fname = self.load_data()
         if data is None or fname is None:
             return
-        self.inair_thermal_ampl, self.inair_thermal_freq, self.inair_params = data
+        self.inair_thermal_ampl, self.inair_thermal_freq, _, self.inair_params = data
         self.air_thermal_text.setText(fname)
-        resonancef = self.inair_params['resonancef']
+        resonancef = self.inair_params['parameter.f']
         self.air_roi.setRegion([np.log10(resonancef/2), np.log10(resonancef*2)])
         self.update_plot()
 
@@ -139,9 +141,9 @@ class ThermalTuneWidget(QtGui.QWidget):
         data, fname = self.load_data()
         if data is None or fname is None:
             return
-        self.inliquid_thermal_ampl, self.inliquid_thermal_freq, self.inliquid_params = data
+        self.inliquid_thermal_ampl, self.inliquid_thermal_freq, _, self.inliquid_params = data
         self.lq_thermal_text.setText(fname)
-        resonancef = self.inliquid_params['resonancef']
+        resonancef = self.inliquid_params['parameter.f']
         self.lq_roi.setRegion([np.log10(resonancef/2), np.log10(resonancef*2)])
         self.update_plot()
     
@@ -250,12 +252,13 @@ class ThermalTuneWidget(QtGui.QWidget):
             mask = np.logical_and(self.inair_thermal_freq >= minfreq, self.inair_thermal_freq <= maxfreq)
             ampl_fit = self.inair_thermal_ampl[mask]
             freq_fit = self.inair_thermal_freq[mask]
-            thermal_fit_result_air = ThermalFit(freq_fit, ampl_fit)
+            sho_model_air = SHOModel()
+            sho_model_air.fit(freq_fit, ampl_fit)
             self.freq_fit_air = freq_fit
-            self.thermal_fit_air = thermal_fit_result_air.best_fit
-            A1_air = thermal_fit_result_air.best_values['A']
-            fR1_air = thermal_fit_result_air.best_values['fR']
-            Q1_air = thermal_fit_result_air.best_values['Q']
+            self.thermal_fit_air = sho_model_air.eval(self.freq_fit_air)
+            A1_air = sho_model_air.A
+            fR1_air = sho_model_air.fR
+            Q1_air = sho_model_air.Q
             self.k0_air, self.GCI_cant_springConst_air, self.involsValue_air, self.invOLS_H_air =\
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
@@ -270,12 +273,13 @@ class ThermalTuneWidget(QtGui.QWidget):
             mask = np.logical_and(self.inliquid_thermal_freq >= minfreq, self.inliquid_thermal_freq <= maxfreq)
             ampl_fit = self.inliquid_thermal_ampl[mask]
             freq_fit = self.inliquid_thermal_freq[mask]
-            thermal_fit_result_lq = ThermalFit(freq_fit, ampl_fit)
+            sho_model_lq = SHOModel()
+            sho_model_lq.fit(freq_fit, ampl_fit)
             self.freq_fit_lq = freq_fit
-            self.thermal_fit_lq = thermal_fit_result_lq.best_fit
-            A1_lq = thermal_fit_result_lq.best_values['A']
-            fR1_lq = thermal_fit_result_lq.best_values['fR']
-            Q1_lq = thermal_fit_result_lq.best_values['Q']
+            self.thermal_fit_lq = sho_model_lq.eval(self.freq_fit_lq)
+            A1_lq = sho_model_lq.A
+            fR1_lq = sho_model_lq.fR
+            Q1_lq = sho_model_lq.Q
             self.k0_lq, self.GCI_cant_springConst_lq, self.involsValue_lq, self.invOLS_H_lq =\
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,

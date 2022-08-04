@@ -182,7 +182,7 @@ class TingFitWidget(QtGui.QWidget):
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         spring_k = analysis_params.child('Spring Constant').value()
         ting_params = self.params.child('Ting Fit Params')
-        poc_win = ting_params.child('PoC Window').value()
+        poc_win = ting_params.child('PoC Window').value() / 1e9
         vdragcorr = ting_params.child('Correct Viscous Drag').value()
         polyordr = ting_params.child('Poly. Order').value()
         rampspeed = ting_params.child('Ramp Speed').value() / 1e6
@@ -222,7 +222,8 @@ class TingFitWidget(QtGui.QWidget):
         self.p3.plot(ext_data.zheight, ext_data.vdeflection)
         self.p3.plot(ret_data.zheight, ret_data.vdeflection)
 
-        rov_PoC = get_poc_RoV_method(ext_data.zheight, ext_data.vdeflection, win_size=poc_win)
+        rov_PoC = get_poc_RoV_method(ext_data.zheight, ext_data.vdeflection, poc_win)
+
         poc = [rov_PoC[0], 0]
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)

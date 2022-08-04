@@ -134,7 +134,7 @@ def do_microrheo_sine(fdc, param_dict):
         segment_data.zheight = segment_data.zheight[::-1]
         segment_data.vdeflection = segment_data.vdeflection[::-1]
     rov_PoC = get_poc_RoV_method(
-        segment_data.zheight, segment_data.vdeflection, win_size=param_dict['poc_win'])
+        segment_data.zheight, segment_data.vdeflection, param_dict['poc_win'])
     poc = [rov_PoC[0], 0]
     hertz_result = do_hertz_fit(fdc, param_dict)
     hertz_d0 = hertz_result.delta0

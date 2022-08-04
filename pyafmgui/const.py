@@ -56,7 +56,7 @@ class HertzFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'nm'},
+            {'name': 'PoC Window', 'type': 'int', 'value': 350, 'units':'nm'},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
             {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
@@ -109,7 +109,7 @@ class TingFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Window', 'type': 'int', 'value': 50, 'units':'nm'},
+            {'name': 'PoC Window', 'type': 'int', 'value': 350, 'units':'nm'},
             {'name': 'Correct Viscous Drag', 'type': 'bool', 'value':False},
             {'name': 'Poly. Order', 'type': 'int', 'value':2},
             {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
@@ -178,7 +178,7 @@ class CantileverParams(pTypes.GroupParameter):
 
 
 general_params = {'name': 'General Options', 'type': 'group', 'children': [
-        {'name': 'Compute All Curves', 'type': 'bool', 'value': True},
+        {'name': 'Compute All Curves', 'type': 'bool', 'value': False},
         {'name': 'Compute All Files', 'type': 'bool', 'value': False}
     ]}
 
