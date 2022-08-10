@@ -8,13 +8,14 @@ import pyafmgui.const as cts
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
-from pyafmrheo.utils.force_curves import get_poc_RoV_method, correct_viscous_drag
+from pyafmrheo.utils.force_curves import get_poc_RoV_method, correct_viscous_drag, correct_tilt
 
 class TingFitWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
         super(TingFitWidget, self).__init__(parent)
         self.session = session
         self.current_file = None
+        self.tilt_roi = None
         self.file_dict = {}
         self.session.ting_fit_widget = self
         self.init_gui()
@@ -151,9 +152,6 @@ class TingFitWidget(QtGui.QWidget):
             if self.session.data_viewer_widget is not None:
                 self.session.data_viewer_widget.ROI.setPos(x, y)
                 self.session.data_viewer_widget.updateCurve()
-    
-    def manual_override(self):
-        pass
 
     def updatePlots(self):
 
@@ -174,24 +172,28 @@ class TingFitWidget(QtGui.QWidget):
         self.residual = None
         self.ting_tc = None
 
-        analysis_params = self.params.child('Analysis Params')
         current_file_id = self.current_file.filemetadata['Entry_filename']
-        current_file = self.current_file
         current_curve_indx = self.session.current_curve_index
+
+        analysis_params = self.params.child('Analysis Params')
+        ting_params = self.params.child('Ting Fit Params')
+
         height_channel = analysis_params.child('Height Channel').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         spring_k = analysis_params.child('Spring Constant').value()
-        ting_params = self.params.child('Ting Fit Params')
+        
         poc_win = ting_params.child('PoC Window').value() / 1e9
         vdragcorr = ting_params.child('Correct Viscous Drag').value()
         polyordr = ting_params.child('Poly. Order').value()
         rampspeed = ting_params.child('Ramp Speed').value() / 1e6
         contact_offset = ting_params.child('Contact Offset').value() / 1e6
-        t0 = ting_params.child('t0').value()
-        smooth_w = ting_params.child('Smoothing Window').value()
-        compute_v_flag = ting_params.child('Estimate V0t & V0r').value()
+        t0_scaling = ting_params.child('t0').value()
+        pts_downsample = ting_params.child('Downsample Pts.').value()
+        correct_tilt_flag = analysis_params.child('Correct Tilt').value()
+        tilt_min_offset = analysis_params.child('Min Tilt Offset').value() / 1e9
+        tilt_max_offset = analysis_params.child('Max Tilt Offset').value() / 1e9
 
-        force_curve = current_file.getcurve(current_curve_indx)
+        force_curve = self.current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
 
         if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
@@ -223,8 +225,20 @@ class TingFitWidget(QtGui.QWidget):
         self.p3.plot(ret_data.zheight, ret_data.vdeflection)
 
         rov_PoC = get_poc_RoV_method(ext_data.zheight, ext_data.vdeflection, poc_win)
-
         poc = [rov_PoC[0], 0]
+
+        # Perform tilt correction
+        if correct_tilt_flag:
+            height = np.r_[ext_data.zheight, ret_data.zheight]
+            deflection = np.r_[ext_data.vdeflection, ret_data.vdeflection]
+            idx = len(ext_data.zheight)
+            corr_defl = correct_tilt(
+                height, deflection, poc[0],
+                tilt_max_offset, tilt_min_offset
+            )
+            ext_data.vdeflection = corr_defl[:idx]
+            ret_data.vdeflection = corr_defl[idx:]
+
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
@@ -235,60 +249,67 @@ class TingFitWidget(QtGui.QWidget):
         if vdragcorr:
             ext_data.force, ret_data.force = correct_viscous_drag(
                 ext_data.indentation, ext_data.force, ret_data.indentation, ret_data.force, poly_order=polyordr, speed=rampspeed)
-        p1 = self.p1.plot(ext_data.indentation, ext_data.force)
+        self.p1.plot(ext_data.indentation, ext_data.force)
         self.p1.plot(ret_data.indentation, ret_data.force)
-        indentation = np.r_[ext_data.indentation, ret_data.indentation]
-        force = np.r_[ext_data.force, ret_data.force]
+        
+        idx_tc = (np.abs(ext_data.indentation - 0)).argmin()
         t0 = ext_data.time[-1]
+        indentation = np.r_[ext_data.indentation, ret_data.indentation]
         time = np.r_[ext_data.time, ret_data.time + t0]
+        force = np.r_[ext_data.force, ret_data.force]
         fit_mask = indentation > (-1 * contact_offset)
-        ind_fit = indentation[fit_mask] 
+        tc = time[idx_tc]
+        ind_fit = indentation[fit_mask]
         force_fit = force[fit_mask]
         force_fit = force_fit - force_fit[0]
         time_fit = time[fit_mask]
-        time_fit = time_fit - time_fit[0]
-        idx_tm = np.argmax(force_fit)
-        if self.ting_tc:
-            ting_d0_idx = int((np.abs(np.array(time_fit) - self.ting_tc)).argmin())
-            self.ting_d0 = ind_fit[ting_d0_idx]
+        tc_fit = tc-time_fit[0]
+        time_fit = time_fit - time_fit[0] - tc_fit
         
-        self.tilt_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w')
-        self.tilt_roi.setZValue(10)
-        self.p1.addItem(self.tilt_roi, ignoreBounds=True)
-        self.tilt_roi.setClipItem(p1)
-        self.tilt_roi.setRegion([-10e-9, -1e-6])
+        downfactor= len(time_fit) // pts_downsample
+        idxDown = list(range(0, len(time_fit), downfactor))
 
-        self.p2.plot(ind_fit - self.ting_d0, force_fit)
+        self.p2.plot(time_fit[idxDown], force_fit[idxDown])
+
+        self.update_tilt_range()
 
         if self.fit_data is not None:
             self.p2.plot(
-                ind_fit - self.ting_d0,
-                self.fit_data.eval(time_fit, force_fit, ind_fit, t0=t0, idx_tm=idx_tm, smooth_w=smooth_w),
-                pen ='g', name='Fit'
+                time_fit[idxDown],
+                self.fit_data.eval(
+                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling
+                ), pen ='g', name='Fit')
+            vertical_line_tinc_tc = pg.InfiniteLine(
+                pos=self.ting_tc, angle=90, pen='y', movable=False, label='Ting tc', labelOpts={'color':'y', 'position':0.5}
             )
+            self.p2.addItem(vertical_line_tinc_tc, ignoreBounds=True)
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')
             self.p2legend.addItem(style, f'Hertz Red. Chi: {self.hertz_redchi:.3E}')
             self.p2legend.addItem(style, f'Ting E: {self.ting_E:.2f} Pa')
             self.p2legend.addItem(style, f'Ting Fluid. Exp.: {self.ting_exp:.3f}')
-            self.p2legend.addItem(style, f'Ting d0: {self.ting_d0 + poc[0]:.3E} m')
+            self.p2legend.addItem(style, f'Ting tc: {self.ting_tc+tc_fit:.2f} s')
             self.p2legend.addItem(style, f'Ting Red. Chi: {self.ting_redchi:.3E}')
-            res = self.p4.plot(ind_fit - self.ting_d0, self.fit_data.get_residuals(time_fit, force_fit, ind_fit, t0=t0, idx_tm=idx_tm, smooth_w=smooth_w), pen=None, symbol='o')
+            res = self.p4.plot(
+                time_fit[idxDown],
+                self.fit_data.get_residuals(
+                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling
+                ), pen=None, symbol='o')
             res.setSymbolSize(5)
         
         self.p1.setLabel('left', 'Force', 'N')
         self.p1.setLabel('bottom', 'Indentation', 'm')
         self.p1.setTitle("Force-Indentation")
         self.p2.setLabel('left', 'Force', 'N')
-        self.p2.setLabel('bottom', 'Indentation', 'm')
-        self.p2.setTitle("Force-Indentation Ting Fit")
+        self.p2.setLabel('bottom', 'Time', 's')
+        self.p2.setTitle("Force-Time Ting Fit")
         self.p3.setLabel('left', 'Deflection', 'm')
         self.p3.setLabel('bottom', 'zHeight', 'm')
         self.p3.addLegend()
         self.p3.setTitle("Deflection-zHeight")
         self.p4.setLabel('left', 'Residuals')
-        self.p4.setLabel('bottom', 'Indentation', 'm')
+        self.p4.setLabel('bottom', 'Time', 's')
         self.p4.setTitle("Ting Fit Residuals")
         
         self.l.addItem(self.p1)
@@ -296,6 +317,24 @@ class TingFitWidget(QtGui.QWidget):
         self.l.nextRow()
         self.l.addItem(self.p3)
         self.l.addItem(self.p4)
+    
+    def update_tilt_range(self):
+        dataItems = self.p1.listDataItems()
+        analysis_params = self.params.child('Analysis Params')
+        correct_tilt = analysis_params.child('Correct Tilt').value()
+        tilt_min_offset = analysis_params.child('Min Tilt Offset').value() / 1e9
+        tilt_max_offset = analysis_params.child('Max Tilt Offset').value() / 1e9
+        if self.tilt_roi is not None:
+            self.p1.removeItem(self.tilt_roi)
+        if correct_tilt:
+            self.tilt_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w', movable=False)
+            self.tilt_roi.setZValue(10)
+            self.tilt_roi.setClipItem(dataItems[0])
+            self.p1.removeItem(self.tilt_roi)
+            self.p1.addItem(self.tilt_roi, ignoreBounds=True)
+            self.tilt_roi.setRegion([-1 * tilt_min_offset, -1 * tilt_max_offset])
+        else:
+            self.tilt_roi = None
 
 
     def updateParams(self):
@@ -310,3 +349,7 @@ class TingFitWidget(QtGui.QWidget):
             analysis_params.child('Deflection Sensitivity').setValue(self.current_file.filemetadata['defl_sens_nmbyV'])
         else:
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)
+        
+        analysis_params.child('Correct Tilt').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Min Tilt Offset').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Max Tilt Offset').sigValueChanged.connect(self.updatePlots)

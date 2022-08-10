@@ -8,7 +8,7 @@ import pyafmgui.const as cts
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
-from pyafmrheo.utils.force_curves import get_poc_RoV_method
+from pyafmrheo.utils.force_curves import get_poc_RoV_method, correct_tilt
 
 class HertzFitWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -17,6 +17,7 @@ class HertzFitWidget(QtGui.QWidget):
         self.current_file = None
         self.min_val_line = None
         self.max_val_line = None
+        self.tilt_roi = None
         self.file_dict = {}
         self.session.hertz_fit_widget = self
         self.init_gui()
@@ -169,18 +170,22 @@ class HertzFitWidget(QtGui.QWidget):
         self.fit_data = None
         self.residual = None
 
-        analysis_params = self.params.child('Analysis Params')
         current_file_id = self.current_file.filemetadata['Entry_filename']
-        current_file = self.current_file
         current_curve_indx = self.session.current_curve_index
+        
+        analysis_params = self.params.child('Analysis Params')
         height_channel = analysis_params.child('Height Channel').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         spring_k = analysis_params.child('Spring Constant').value()
         curve_seg = analysis_params.child('Curve Segment').value()
+        correct_tilt_flag = analysis_params.child('Correct Tilt').value()
+        tilt_min_offset = analysis_params.child('Min Tilt Offset').value() / 1e9
+        tilt_max_offset = analysis_params.child('Max Tilt Offset').value() / 1e9
+        
         hertz_params = self.params.child('Hertz Fit Params')
         poc_win = hertz_params.child('PoC Window').value() / 1e9
 
-        force_curve = current_file.getcurve(current_curve_indx)
+        force_curve = self.current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
 
         if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
@@ -215,6 +220,19 @@ class HertzFitWidget(QtGui.QWidget):
         
         rov_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
         poc = [rov_PoC[0], 0]
+
+        # Perform tilt correction
+        if correct_tilt_flag:
+            height = np.r_[ext_data.zheight, ret_data.zheight]
+            deflection = np.r_[ext_data.vdeflection, ret_data.vdeflection]
+            idx = len(ext_data.zheight)
+            corr_defl = correct_tilt(
+                height, deflection, poc[0],
+                tilt_max_offset, tilt_min_offset
+            )
+            ext_data.vdeflection = corr_defl[:idx]
+            ret_data.vdeflection = corr_defl[idx:]
+
         force_curve.get_force_vs_indentation(poc, spring_k)
 
         if curve_seg == 'extend':
@@ -227,22 +245,17 @@ class HertzFitWidget(QtGui.QWidget):
             self.force = ret_data.force
             self.force = self.force - self.force[-1]
 
-        p1 = self.p1.plot(self.indentation, self.force)
+        self.p1.plot(self.indentation, self.force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
             d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})
             self.p1.addItem(d0_vertical_line, ignoreBounds=True)
-        
-        self.tilt_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w')
-        self.tilt_roi.setZValue(10)
-        self.p1.addItem(self.tilt_roi, ignoreBounds=True)
-        self.tilt_roi.setClipItem(p1)
-        self.tilt_roi.setRegion([-10e-9, -1e-6])
 
         self.p2.plot(self.indentation - self.hertz_d0, self.force)
 
         self.update_fit_range()
+        self.update_tilt_range()
  
         if self.fit_data is not None:
             x = self.indentation
@@ -275,6 +288,24 @@ class HertzFitWidget(QtGui.QWidget):
         self.l.addItem(self.p3)
         self.l.addItem(self.p4)
     
+    def update_tilt_range(self):
+        dataItems = self.p1.listDataItems()
+        analysis_params = self.params.child('Analysis Params')
+        correct_tilt = analysis_params.child('Correct Tilt').value()
+        tilt_min_offset = analysis_params.child('Min Tilt Offset').value() / 1e9
+        tilt_max_offset = analysis_params.child('Max Tilt Offset').value() / 1e9
+        if self.tilt_roi is not None:
+            self.p1.removeItem(self.tilt_roi)
+        if correct_tilt:
+            self.tilt_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w', movable=False)
+            self.tilt_roi.setZValue(10)
+            self.tilt_roi.setClipItem(dataItems[0])
+            self.p1.removeItem(self.tilt_roi)
+            self.p1.addItem(self.tilt_roi, ignoreBounds=True)
+            self.tilt_roi.setRegion([-1 * tilt_min_offset, -1 * tilt_max_offset])
+        else:
+            self.tilt_roi = None
+
     def update_fit_range(self):
         hertz_params = self.params.child('Hertz Fit Params')
         fit_range_type = hertz_params.child('Fit Range Type').value()
@@ -318,6 +349,10 @@ class HertzFitWidget(QtGui.QWidget):
             analysis_params.child('Deflection Sensitivity').setValue(self.current_file.filemetadata['defl_sens_nmbyV'])
         else:
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)
+        
+        analysis_params.child('Correct Tilt').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Min Tilt Offset').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Max Tilt Offset').sigValueChanged.connect(self.updatePlots)
         
         hertz_params = self.params.child('Hertz Fit Params')
         hertz_params.child('Fit Range Type').sigValueChanged.connect(self.update_fit_range)

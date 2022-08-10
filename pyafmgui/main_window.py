@@ -21,7 +21,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.init_gui()
 		
 	def init_gui(self):
-		self.setWindowTitle("PyAFMRheo v.0.0.3")
+		self.setWindowTitle("PyAFMRheo v.0.0.4")
 
 		self.mdi = QtWidgets.QMdiArea()
 		self.setCentralWidget(self.mdi)

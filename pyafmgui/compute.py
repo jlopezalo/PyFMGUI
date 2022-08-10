@@ -4,9 +4,12 @@ import pyqtgraph.multiprocess as mp
 import platform, multiprocessing
 
 import pyafmgui.const as cts
-from pyafmgui.routines.hertzfit import do_hertz_fit
-from pyafmgui.routines.tingfit import do_ting_fit
-from pyafmgui.routines.microrheology import *
+from pyafmrheo.routines.HertzFit import doHertzFit
+from pyafmrheo.routines.TingFit import doTingFit
+from pyafmrheo.routines.PiezoCharacterization import doPiezoCharacterization
+from pyafmrheo.routines.ViscousDragSteps import doViscousDragSteps
+from pyafmrheo.routines.MicrorheologyFFT import doMicrorheologyFFT
+from pyafmrheo.routines.MicrorheologySine import doMicrorheologySine
 import traceback
 
 def analyze_fdc(session, param_dict, fdc):
@@ -14,12 +17,12 @@ def analyze_fdc(session, param_dict, fdc):
     fdc.preprocess_force_curve(param_dict['def_sens'], param_dict['height_channel'])
     if session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
         fdc.shift_height()
-    if param_dict['method']  == "HertzFit": return do_hertz_fit(fdc, param_dict)
-    elif param_dict['method'] == "TingFit": return do_ting_fit(fdc, param_dict)
-    elif param_dict['method'] == "PiezoChar": return do_piezo_char(fdc, param_dict)
-    elif param_dict['method'] == "VDrag": return do_vdrag_char(fdc, param_dict)
-    elif param_dict['method'] == "Microrheo": return do_microrheo(fdc, param_dict)
-    elif param_dict['method'] == "MicrorheoSine": return do_microrheo_sine(fdc, param_dict)
+    if param_dict['method']  == "HertzFit": return doHertzFit(fdc, param_dict)
+    elif param_dict['method'] == "TingFit": return doTingFit(fdc, param_dict)
+    elif param_dict['method'] == "PiezoChar": return doPiezoCharacterization(fdc, param_dict)
+    elif param_dict['method'] == "VDrag": return doViscousDragSteps(fdc, param_dict)
+    elif param_dict['method'] == "Microrheo": return doMicrorheologyFFT(fdc, param_dict)
+    elif param_dict['method'] == "MicrorheoSine": return doMicrorheologySine(fdc, param_dict)
 
 def clear_file_results(session, method, file_id):
     if file_id in session.hertz_fit_results and method == "HertzFit":
@@ -98,11 +101,11 @@ def process_maps(session, params, filedict, method):
 
 def compute(session, params, filedict, method):
     fv_flag = any(file.isFV for file in filedict.values())
-    if platform.system() == "Darwin":
-            try:
-                multiprocessing.set_start_method('spawn')
-            except RuntimeError:
-                pass
+    #if platform.system() == "Darwin":
+    #    try:
+    #        multiprocessing.set_start_method('spawn')
+    #    except RuntimeError:
+    #        pass
     if not params['compute_all_curves'] or not fv_flag:
         process_sfc(session, params, filedict, method)
     else:

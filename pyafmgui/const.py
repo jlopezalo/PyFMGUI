@@ -25,7 +25,9 @@ class AnalysisParams(pTypes.GroupParameter):
             {'name': 'Tip Radius', 'type': 'float', 'value': 75, 'units':'nm'},
             {'name': 'Tip Area', 'type': 'float', 'value': None},
             {'name': 'Curve Segment', 'type': 'list', 'limits':['extend', 'retract']},
-            {'name': 'Correct Tilt', 'type': 'bool', 'value':False}
+            {'name': 'Correct Tilt', 'type': 'bool', 'value':False},
+            {'name': 'Min Tilt Offset', 'type': 'float', 'value': 10, 'units':'nm'},
+            {'name': 'Max Tilt Offset', 'type': 'float', 'value': 1000, 'units':'nm'}
         ])
 
         if self.mode == "microrheo":
@@ -34,11 +36,15 @@ class AnalysisParams(pTypes.GroupParameter):
                 {'name': 'Max Frequency', 'type': 'int', 'value': None, 'units':'Hz'},
                 {'name': 'B Coef', 'type': 'float', 'value': None, 'units':'Ns/m'}
             ])
-
+        
         self.contact_model = self.param('Contact Model')
         self.contact_model.sigValueChanged.connect(self.contact_model_changed)
 
+        self.correct_tilt = self.param('Correct Tilt')
+        self.correct_tilt.sigValueChanged.connect(self.correct_tilt_changed)
+
         self.contact_model_changed()
+        self.correct_tilt_changed()
 
     def contact_model_changed(self):
         if self.contact_model.value() == 'paraboloid':
@@ -50,6 +56,14 @@ class AnalysisParams(pTypes.GroupParameter):
             self.param('Tip Angle').show(True)
             self.param('Tip Radius').show(False)
             self.param('Tip Area').show(False)
+    
+    def correct_tilt_changed(self):
+        if self.correct_tilt.value():
+            self.param('Min Tilt Offset').show(True)
+            self.param('Max Tilt Offset').show(True)
+        else:
+            self.param('Min Tilt Offset').show(False)
+            self.param('Max Tilt Offset').show(False)
 
 class HertzFitParams(pTypes.GroupParameter):
     def __init__(self, **opts):
@@ -110,24 +124,37 @@ class TingFitParams(pTypes.GroupParameter):
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
             {'name': 'PoC Window', 'type': 'int', 'value': 350, 'units':'nm'},
+            {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
+            {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
+            {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
+            {'name': 'Min Force', 'type': 'float', 'value': None, 'units':'nN'},
+            {'name': 'Max Force', 'type': 'float', 'value': None, 'units':'nN'},
             {'name': 'Correct Viscous Drag', 'type': 'bool', 'value':False},
             {'name': 'Poly. Order', 'type': 'int', 'value':2},
             {'name': 'Ramp Speed', 'type': 'float', 'value':0, 'units': 'um/s'},
             {'name': 'Model Type', 'type': 'list', 'limits': ['analytical', 'numerical']},
             {'name': 'Estimate V0t & V0r', 'type': 'bool', 'value': False},
             {'name': 't0', 'type': 'int', 'value': 1, 'units':'s'},
-            {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
+            {'name': 'Downsample Pts.', 'type': 'int', 'value': 300},
+            {'name': 'Fit Line to non contact', 'type': 'bool', 'value':False},
             {'name': 'Init Slope', 'type': 'float', 'value': 0},
+            {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},
             {'name': 'Auto Init E0', 'type': 'bool', 'value':True},
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init tc', 'type': 'float', 'value': 0, 'units':'s'},
             {'name': 'Init f0', 'type': 'float', 'value': 0, 'units':'nN'},
             {'name': 'Viscous Drag', 'type': 'float', 'value': 0, 'units':'pN/nm·s'},
+            {'name': 'Auto Init  Fluid. Exp.', 'type': 'bool', 'value':True},
             {'name': 'Init Fluid. Exp.', 'type': 'float', 'value': 0.20},
             {'name': 'Contact Offset', 'type': 'float', 'value': 1, 'units':'um'},
             {'name': 'Smoothing Window', 'type': 'int', 'value': 5, 'units':'points'}
-
         ])
+
+        self.range_mode = self.param('Fit Range Type')
+        self.range_mode.sigValueChanged.connect(self.range_mode_changed)
+
+        self.fit_line = self.param('Fit Line to non contact')
+        self.fit_line.sigValueChanged.connect(self.fit_line_changed)
 
         self.model_type = self.param('Model Type')
         self.model_type.sigValueChanged.connect(self.model_type_changed)
@@ -135,8 +162,35 @@ class TingFitParams(pTypes.GroupParameter):
         self.vdrag_corr = self.param('Correct Viscous Drag')
         self.vdrag_corr.sigValueChanged.connect(self.vdrag_changed)
 
+        self.range_mode_changed()
+        self.fit_line_changed()
         self.model_type_changed()
         self.vdrag_changed()
+    
+    def range_mode_changed(self):
+        if self.range_mode.value() == 'full':
+            self.param('Min Indentation').show(False)
+            self.param('Max Indentation').show(False)
+            self.param('Min Force').show(False)
+            self.param('Max Force').show(False)
+
+        elif self.range_mode.value() == 'indentation':
+            self.param('Min Indentation').show(True)
+            self.param('Max Indentation').show(True)
+            self.param('Min Force').show(False)
+            self.param('Max Force').show(False)
+
+        elif self.range_mode.value() == 'force':
+            self.param('Min Indentation').show(False)
+            self.param('Max Indentation').show(False)
+            self.param('Min Force').show(True)
+            self.param('Max Force').show(True)
+    
+    def fit_line_changed(self):
+        if self.fit_line.value():
+            self.param('Init Slope').show(True)
+        else:
+            self.param('Init Slope').show(False)
         
     def model_type_changed(self):
         if self.model_type.value() == 'numerical':
@@ -181,12 +235,6 @@ general_params = {'name': 'General Options', 'type': 'group', 'children': [
         {'name': 'Compute All Curves', 'type': 'bool', 'value': False},
         {'name': 'Compute All Files', 'type': 'bool', 'value': False}
     ]}
-
-# plot_params = {'name': 'Display Options', 'type': 'group', 'children': [
-#         {'name': 'Curve X axis', 'type': 'list', 'limits': ['zheight', 'time']},
-#         {'name': 'Curve Y axis', 'type': 'list', 'limits': ['vdeflection', 'zheight']},
-#         {'name': 'Map Data', 'type': 'list', 'limits': ['piezo height', 'Data Missing Check', 'Slope Check', 'Baseline Noise Check']}
-#     ]}
 
 plot_params = {'name': 'Display Options', 'type': 'group', 'children': [
         {'name': 'Curve X axis', 'type': 'list', 'limits': ['zheight', 'time']},
