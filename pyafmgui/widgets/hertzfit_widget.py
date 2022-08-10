@@ -91,6 +91,7 @@ class HertzFitWidget(QtGui.QWidget):
         
         params = get_params(self.params, "HertzFit")
         compute(self.session, params,  self.filedict, "HertzFit")
+        QtWidgets.QApplication.processEvents()
         self.updatePlots()
 
     def update(self):
@@ -193,7 +194,7 @@ class HertzFitWidget(QtGui.QWidget):
 
         file_hertz_result = self.session.hertz_fit_results.get(current_file_id, None)
 
-        if file_hertz_result:
+        if file_hertz_result is not None:
             for curve_indx, curve_hertz_result in file_hertz_result:
                 if curve_hertz_result is None:
                     continue

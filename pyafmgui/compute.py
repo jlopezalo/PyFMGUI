@@ -1,7 +1,6 @@
-import PyQt5
 import pyqtgraph.multiprocess as mp
 
-import platform, multiprocessing
+from platform import system
 
 import pyafmgui.const as cts
 from pyafmrheo.routines.HertzFit import doHertzFit
@@ -39,7 +38,8 @@ def clear_file_results(session, method, file_id):
 def process_sfc(session, params, filedict, method):
     file_ids = filedict.keys()
     file_results = []
-    with mp.Parallelize(tasks=file_ids, results=file_results, progressDialog='Processing Single Curves') as tasker:
+    n_workers = 1 if system() == 'Darwin' else None
+    with mp.Parallelize(tasks=file_ids, results=file_results, workers=n_workers, progressDialog='Processing Single Curves') as tasker:
         for file_id in tasker:
             try:
                 # Get fileid
@@ -79,7 +79,8 @@ def process_maps(session, params, filedict, method):
         # Define all curve indices
         curve_indices = list(range(nb_curves))
         # Process all curves in paralel
-        with mp.Parallelize(tasks=curve_indices, results=file_results, progressDialog=f'Processing File: {file_id}') as tasker:
+        n_workers = 1 if system() == 'Darwin' else None
+        with mp.Parallelize(tasks=curve_indices, results=file_results, workers=n_workers, progressDialog=f'Processing File: {file_id}') as tasker:
             for idx in tasker:
                 try:
                     fdc = file.getcurve(idx)
@@ -101,13 +102,7 @@ def process_maps(session, params, filedict, method):
 
 def compute(session, params, filedict, method):
     fv_flag = any(file.isFV for file in filedict.values())
-    #if platform.system() == "Darwin":
-    #    try:
-    #        multiprocessing.set_start_method('spawn')
-    #    except RuntimeError:
-    #        pass
     if not params['compute_all_curves'] or not fv_flag:
         process_sfc(session, params, filedict, method)
     else:
         process_maps(session, params, filedict, method)
-    

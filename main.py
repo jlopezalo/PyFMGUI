@@ -1,4 +1,5 @@
 import sys
+from platform import system, release
 import multiprocessing
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
@@ -42,6 +43,6 @@ def main():
 	
 if __name__ == '__main__':
 	# Add support for multiprocessing in frozen app
-    # See http://docs.python.org/3/library/multiprocessing.html
-    multiprocessing.freeze_support()
-    main()
+	# # See http://docs.python.org/3/library/multiprocessing.html
+	multiprocessing.freeze_support()
+	main()

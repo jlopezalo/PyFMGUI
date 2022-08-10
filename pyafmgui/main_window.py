@@ -178,6 +178,7 @@ class MainWindow(QtWidgets.QMainWindow):
 	
 	def load_files(self, filelist):
 		loadfiles(self.session, filelist)
+		QtWidgets.QApplication.processEvents()
 		self.close_dialog()
 
 	def signal_accept(self, msg):

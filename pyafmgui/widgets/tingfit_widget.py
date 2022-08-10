@@ -88,6 +88,7 @@ class TingFitWidget(QtGui.QWidget):
             self.filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
         params = get_params(self.params, "TingFit")
         compute(self.session, params,  self.filedict, "TingFit")
+        QtWidgets.QApplication.processEvents()
         self.updatePlots()
 
     def update(self):
