@@ -278,7 +278,9 @@ class TingFitWidget(QtGui.QWidget):
             self.p2.plot(
                 time_fit[idxDown],
                 self.fit_data.eval(
-                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling
+                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling,
+                    idx_tm=self.fit_data.idx_tm, smooth_w=self.fit_data.smooth_w,
+                    v0t=self.fit_data.v0t, v0r=self.fit_data.v0r
                 ), pen ='g', name='Fit')
             vertical_line_tinc_tc = pg.InfiniteLine(
                 pos=self.ting_tc, angle=90, pen='y', movable=False, label='Ting tc', labelOpts={'color':'y', 'position':0.5}
@@ -295,7 +297,9 @@ class TingFitWidget(QtGui.QWidget):
             res = self.p4.plot(
                 time_fit[idxDown],
                 self.fit_data.get_residuals(
-                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling
+                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling,
+                    idx_tm=self.fit_data.idx_tm, smooth_w=self.fit_data.smooth_w,
+                    v0t=self.fit_data.v0t, v0r=self.fit_data.v0r
                 ), pen=None, symbol='o')
             res.setSymbolSize(5)
         

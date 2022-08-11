@@ -60,7 +60,7 @@ def unpack_ting_result(row_dict, ting_result):
 def unpack_piezochar_result(row_dict, piezochar_result):
     row_dict['frequency'] = piezochar_result[0]
     row_dict['fi_degrees'] = piezochar_result[1]
-    row_dict['amp_quot'] = piezochar_result[2]
+    row_dict['amp_quotient'] = piezochar_result[2]
     return row_dict
 
 def unpack_vdrag_result(row_dict, vdrag_result):
@@ -143,7 +143,7 @@ def prepare_export_results(session):
             
             outputdf = pd.DataFrame(loaded_results)
             if result_type == 'piezochar_results':
-                outputdf = outputdf.explode(['frequency', 'fi_degrees', 'amp_quot'])
+                outputdf = outputdf.explode(['frequency', 'fi_degrees', 'amp_quotient'])
             elif result_type == 'vdrag_results':
                 outputdf = outputdf.explode(['frequency', 'Bh', 'Hd_real', 'Hd_imag', 'distances'])
             elif result_type == 'microrheo_results':

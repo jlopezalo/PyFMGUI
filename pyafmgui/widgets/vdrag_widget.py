@@ -233,6 +233,8 @@ class VDragWidget(QtGui.QWidget):
 
         if vdrag_result:
             for curve_indx, curve_vdrag_result in vdrag_result:
+                if curve_vdrag_result is None:
+                    continue
                 if curve_indx == self.session.current_curve_index:
                     self.Bh = curve_vdrag_result[1]
                     self.Hd = curve_vdrag_result[2]

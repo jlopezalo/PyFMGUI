@@ -202,6 +202,8 @@ class PiezoCharWidget(QtGui.QWidget):
 
         if piezo_char_result:
             for curve_indx, curve_piezo_char_result in piezo_char_result:
+                if curve_piezo_char_result is None:
+                    continue
                 if curve_indx == self.session.current_curve_index:
                     self.freqs = curve_piezo_char_result[0]
                     self.fi = curve_piezo_char_result[1]

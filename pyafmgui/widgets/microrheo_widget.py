@@ -250,6 +250,8 @@ class MicrorheoWidget(QtGui.QWidget):
 
         if microrheo_result:
             for curve_indx, curve_microrheo_result in microrheo_result:
+                if curve_microrheo_result is None:
+                    continue
                 if curve_indx == self.session.current_curve_index:
                     self.freqs = curve_microrheo_result[0]
                     self.G_storage = np.array(curve_microrheo_result[1])
