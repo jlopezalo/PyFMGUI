@@ -98,7 +98,6 @@ class HertzFitWidget(QtGui.QWidget):
         self.session.pbar_widget.reset_pbar()
         self.session.pbar_widget.set_label_text('Computing ElasticityFit...')
         self.session.pbar_widget.show()
-        self.session.pbar_widget.set_pbar_range(0, len(filedict))
         # Create thread to run compute
         self.thread = QtCore.QThread()
         # Create worker to run compute
@@ -108,6 +107,8 @@ class HertzFitWidget(QtGui.QWidget):
         # When thread starts run worker
         self.thread.started.connect(self.worker.run)
         self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.range.connect(self.setPbarRange)
+        self.worker.signals.step.connect(self.changestep)
         self.worker.signals.finished.connect(self.oncomplete) # Reset button
         # Start thread
         self.thread.start()
@@ -116,8 +117,14 @@ class HertzFitWidget(QtGui.QWidget):
         # Update the gui
         self.updatePlots()
     
+    def changestep(self, step):
+        self.session.pbar_widget.set_label_sub_text(step)
+    
     def reportProgress(self, n):
         self.session.pbar_widget.set_pbar_value(n)
+    
+    def setPbarRange(self, n):
+        self.session.pbar_widget.set_pbar_range(0, n)
     
     def oncomplete(self):
         self.thread.terminate()
@@ -232,17 +239,17 @@ class HertzFitWidget(QtGui.QWidget):
 
         if file_hertz_result is not None:
             for curve_indx, curve_hertz_result in file_hertz_result:
-                if curve_hertz_result is None:
-                    continue
-                if curve_indx == self.session.current_curve_index:
-                    try:
+                try:
+                    if curve_hertz_result is None:
+                        continue
+                    if curve_indx == self.session.current_curve_index:
                         self.hertz_E = curve_hertz_result.E0
                         self.hertz_d0 = curve_hertz_result.delta0
                         self.hertz_f0 = curve_hertz_result.f0
                         self.hertz_redchi = curve_hertz_result.redchi
                         self.fit_data = curve_hertz_result
-                    except AttributeError:
-                        continue
+                except Exception:
+                    continue
 
         ext_data = force_curve.extend_segments[0][1]
         ret_data = force_curve.retract_segments[-1][1]

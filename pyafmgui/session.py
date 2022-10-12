@@ -22,11 +22,19 @@ class Session:
         self.microrheo_widget = None
         self.macro_widget = None
         self.logger_wiget = None
+        self.export_dialog = None
         self.pbar_widget = None
         self.piezo_char_data = None
         self.piezo_char_file_path = None
         self.sader_username = ""
         self.sader_password = ""
+        self.prepared_results = {
+        'hertz_results': None,
+        'ting_results': None, 
+        'piezochar_results': None,
+        'vdrag_results': None,
+        'microrheo_results': None
+        }
     
     def remove_results(self):
         self.loaded_files_paths = []

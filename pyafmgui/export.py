@@ -122,7 +122,7 @@ def get_file_results(result_type, file_metadata_and_results):
         file_results.append(row_dict)
     return file_results
 
-def prepare_export_results(session):
+def prepare_export_results(session, progress_callback, range_callback, step_callback):
     # Map to relate result type to variable
     # where they are saved in the session.
     results = {
@@ -147,8 +147,16 @@ def prepare_export_results(session):
             # Get files in session
             files_metadata_and_results = [(file_id, session.loaded_files[file_id].filemetadata, file_result) for (file_id, file_result) in result.items()]
             # Start multiprocessing
+            count = 0
+            range_callback.emit(len(files_metadata_and_results))
+            file_results = []
             with concurrent.futures.ProcessPoolExecutor() as executor:
-                file_results = executor.map(partial(get_file_results, result_type), files_metadata_and_results)
+                # file_results = executor.map(partial(get_file_results, result_type), files_metadata_and_results)
+                futures = [executor.submit(get_file_results, result_type, fileinfo) for fileinfo in files_metadata_and_results]
+                for future in concurrent.futures.as_completed(futures):
+                    file_results.append(future.result())
+                    count+=1
+                    progress_callback.emit(count)
             # Flatten result list
             flat_file_results = [item for sublist in file_results for item in sublist]
             # Create dataframe from list of dicts
@@ -166,7 +174,7 @@ def prepare_export_results(session):
             # Assign results to proper result type
             output[result_type] = outputdf
     # Output loaded results
-    return output
+    session.prepared_results = output
 
 def export_results(results, dirname, file_prefix):
     success_flag = False

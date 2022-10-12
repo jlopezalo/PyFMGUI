@@ -107,6 +107,8 @@ class PiezoCharWidget(QtGui.QWidget):
         # When thread starts run worker
         self.thread.started.connect(self.worker.run)
         self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.range.connect(self.setPbarRange)
+        self.worker.signals.step.connect(self.changestep)
         self.worker.signals.finished.connect(self.oncomplete) # Reset button
         # Start thread
         self.thread.start()
@@ -115,8 +117,14 @@ class PiezoCharWidget(QtGui.QWidget):
         # Update the gui
         self.updatePlots()
     
+    def changestep(self, step):
+        self.session.pbar_widget.set_label_sub_text(step)
+    
     def reportProgress(self, n):
         self.session.pbar_widget.set_pbar_value(n)
+
+    def setPbarRange(self, n):
+        self.session.pbar_widget.set_pbar_range(0, n)
     
     def oncomplete(self):
         self.thread.terminate()
@@ -236,13 +244,15 @@ class PiezoCharWidget(QtGui.QWidget):
 
         if piezo_char_result:
             for curve_indx, curve_piezo_char_result in piezo_char_result:
-                if curve_piezo_char_result is None:
+                try:
+                    if curve_piezo_char_result is None:
+                        continue
+                    if curve_indx == self.session.current_curve_index:
+                        self.freqs = curve_piezo_char_result[0]
+                        self.fi = curve_piezo_char_result[1]
+                        self.amp_quot = curve_piezo_char_result[2]
+                except Exception:
                     continue
-                if curve_indx == self.session.current_curve_index:
-                    self.freqs = curve_piezo_char_result[0]
-                    self.fi = curve_piezo_char_result[1]
-                    self.amp_quot = curve_piezo_char_result[2]
-
         t0 = 0
         n_segments = len(modulation_segs)
         for i, (_, segment) in enumerate(modulation_segs):

@@ -10,10 +10,12 @@ class ProgressDialog(QtWidgets.QDialog):
     def init_gui(self):
         vBox = QtWidgets.QVBoxLayout()
         self.textLabel = QtWidgets.QLabel()
+        self.subTextLabel = QtWidgets.QLabel()
         self.pbar = QtWidgets.QProgressBar()
         # self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Cancel)
 
         vBox.addWidget(self.textLabel)
+        vBox.addWidget(self.subTextLabel)
         vBox.addWidget(self.pbar)
         # vBox.addWidget(self.button_box)
         self.setLayout(vBox)
@@ -29,6 +31,9 @@ class ProgressDialog(QtWidgets.QDialog):
 
     def set_label_text(self, text):
         self.textLabel.setText(text)
+
+    def set_label_sub_text(self, text):
+        self.subTextLabel.setText(text)
     
 
 

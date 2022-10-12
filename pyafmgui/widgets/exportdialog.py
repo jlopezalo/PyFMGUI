@@ -2,6 +2,7 @@ import PyQt5
 from pyqtgraph.Qt import QtWidgets, QtCore, QtGui
 from pyqtgraph import TableWidget
 
+from pyafmgui.threading import Worker
 from pyafmgui.export import result_types, prepare_export_results, export_results
 
 class ExportDialog(QtGui.QWidget):
@@ -18,13 +19,13 @@ class ExportDialog(QtGui.QWidget):
         self.updateButton.setText('Update Table')
         
         self.exportButton.clicked.connect(self.doexport)
-        self.updateButton.clicked.connect(self.update_table)
+        self.updateButton.clicked.connect(self.get_results)
 
         self.table_preview = TableWidget(editable=False, sortable=True)
 
         self.results_cb = QtWidgets.QComboBox()
         self.results_cb.addItems(result_types)
-        self.results_cb.currentIndexChanged.connect(self.update_table)
+        self.results_cb.currentIndexChanged.connect(self.get_results)
 
         self.layout = QtWidgets.QVBoxLayout()
 
@@ -61,17 +62,46 @@ class ExportDialog(QtGui.QWidget):
 
         self.setLayout(self.layout)
 
-        self.update_table()
+        self.get_results()
 
     def get_save_folder(self):
         dirname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Save Directory')
         if dirname != "" and dirname is not None:
             self.dirname = dirname
             self.save_folder_text.setText(self.dirname)
+    
+    def closeEvent(self, evnt):
+        self.session.export_dialog = None
+    
+    def get_results(self):
+        self.session.pbar_widget.reset_pbar()
+        self.session.pbar_widget.set_label_text('Preparing Results for export...')
+        self.session.pbar_widget.set_label_sub_text('')
+        self.session.pbar_widget.show()
+        self.thread = QtCore.QThread()
+        self.worker = Worker(prepare_export_results, self.session)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.finished.connect(self.oncomplete) # Reset button
+        self.worker.signals.range.connect(self.setPbarRange)
+        self.thread.start()
+    
+    def setPbarRange(self, n):
+        self.session.pbar_widget.set_pbar_range(0, n)
+
+    def reportProgress(self, n):
+        self.session.pbar_widget.set_pbar_value(n)
+    
+    def oncomplete(self):
+        self.thread.terminate()
+        self.session.pbar_widget.hide()
+        self.session.pbar_widget.reset_pbar()
+        self.update_table()
         
     def update_table(self):
         result_key = self.results_cb.currentText()
-        self.results = prepare_export_results(self.session)
+        self.results = self.session.prepared_results
         if self.results[result_key] is None:
             self.table_preview.clear()
         else:

@@ -22,6 +22,8 @@ class WorkerSignals(QtCore.QObject):
     error = QtCore.pyqtSignal(tuple)
     result = QtCore.pyqtSignal(object)
     progress = QtCore.pyqtSignal(int)
+    range = QtCore.pyqtSignal(int)
+    step = QtCore.pyqtSignal(str)
 
 class Worker(QtCore.QObject):
     '''
@@ -46,6 +48,8 @@ class Worker(QtCore.QObject):
 
         # Add the callback to our kwargs
         self.kwargs['progress_callback'] = self.signals.progress
+        self.kwargs['range_callback'] = self.signals.range
+        self.kwargs['step_callback'] = self.signals.step
 
     @QtCore.pyqtSlot()
     def run(self):

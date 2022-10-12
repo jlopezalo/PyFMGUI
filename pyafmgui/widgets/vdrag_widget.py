@@ -1,5 +1,4 @@
 import os
-from unicodedata import name
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -128,6 +127,8 @@ class VDragWidget(QtGui.QWidget):
         # When thread starts run worker
         self.thread.started.connect(self.worker.run)
         self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.range.connect(self.setPbarRange)
+        self.worker.signals.step.connect(self.changestep)
         self.worker.signals.finished.connect(self.oncomplete) # Reset button
         # Start thread
         self.thread.start()
@@ -136,8 +137,14 @@ class VDragWidget(QtGui.QWidget):
         # Update the gui
         self.updatePlots()
     
+    def changestep(self, step):
+        self.session.pbar_widget.set_label_sub_text(step)
+    
     def reportProgress(self, n):
         self.session.pbar_widget.set_pbar_value(n)
+    
+    def setPbarRange(self, n):
+        self.session.pbar_widget.set_pbar_range(0, n)
     
     def oncomplete(self):
         self.thread.terminate()
@@ -269,12 +276,15 @@ class VDragWidget(QtGui.QWidget):
 
         if vdrag_result:
             for curve_indx, curve_vdrag_result in vdrag_result:
-                if curve_vdrag_result is None:
+                try:
+                    if curve_vdrag_result is None:
+                        continue
+                    if curve_indx == self.session.current_curve_index:
+                        self.Bh = curve_vdrag_result[1]
+                        self.Hd = curve_vdrag_result[2]
+                        distances = curve_vdrag_result[4]
+                except Exception:
                     continue
-                if curve_indx == self.session.current_curve_index:
-                    self.Bh = curve_vdrag_result[1]
-                    self.Hd = curve_vdrag_result[2]
-                    distances = curve_vdrag_result[4]
         
         curve_segments = force_curve.get_segments()
         

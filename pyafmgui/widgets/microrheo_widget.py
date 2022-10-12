@@ -137,6 +137,8 @@ class MicrorheoWidget(QtGui.QWidget):
         # When thread starts run worker
         self.thread.started.connect(self.worker.run)
         self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.range.connect(self.setPbarRange)
+        self.worker.signals.step.connect(self.changestep)
         self.worker.signals.finished.connect(self.oncomplete) # Reset button
         # Start thread
         self.thread.start()
@@ -146,8 +148,14 @@ class MicrorheoWidget(QtGui.QWidget):
         self.updatePlots()
         self.updatePlots()
     
+    def changestep(self, step):
+        self.session.pbar_widget.set_label_sub_text(step)
+    
     def reportProgress(self, n):
         self.session.pbar_widget.set_pbar_value(n)
+    
+    def setPbarRange(self, n):
+        self.session.pbar_widget.set_pbar_range(0, n)
     
     def oncomplete(self):
         self.thread.terminate()
@@ -287,17 +295,20 @@ class MicrorheoWidget(QtGui.QWidget):
 
         if microrheo_result:
             for curve_indx, curve_microrheo_result in microrheo_result:
-                if curve_microrheo_result is None:
+                try:
+                    if curve_microrheo_result is None:
+                        continue
+                    if curve_indx == self.session.current_curve_index:
+                        print(curve_microrheo_result)
+                        self.freqs = curve_microrheo_result[0]
+                        self.G_storage = np.array(curve_microrheo_result[1])
+                        self.G_loss = np.array(curve_microrheo_result[2])
+                        self.Loss_tan = self.G_loss / self.G_storage
+                        if method == 'Sine Fit':
+                            self.ind_results = curve_microrheo_result[3]
+                            self.defl_results = curve_microrheo_result[4]
+                except Exception:
                     continue
-                if curve_indx == self.session.current_curve_index:
-                    print(curve_microrheo_result)
-                    self.freqs = curve_microrheo_result[0]
-                    self.G_storage = np.array(curve_microrheo_result[1])
-                    self.G_loss = np.array(curve_microrheo_result[2])
-                    self.Loss_tan = self.G_loss / self.G_storage
-                    if method == 'Sine Fit':
-                        self.ind_results = curve_microrheo_result[3]
-                        self.defl_results = curve_microrheo_result[4]
                     
         t0 = 0
         t0_2 = 0

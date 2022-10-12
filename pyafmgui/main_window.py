@@ -9,6 +9,7 @@ logger = logging.getLogger()
 # Get methods and objects needed
 from pyafmgui.const import pyFM_VERSION
 from pyafmgui.loadfiles import loadfiles
+from pyafmgui.threading import Worker
 from pyafmgui.widgets.exportdialog import ExportDialog
 from pyafmgui.widgets.hertzfit_widget import HertzFitWidget
 from pyafmgui.widgets.tingfit_widget import TingFitWidget
@@ -188,8 +189,9 @@ class MainWindow(QtWidgets.QMainWindow):
 				if valid_files != []:
 					self.load_files(valid_files)
 		if q.text() == "Export Results":
-			export_dialog = ExportDialog(self.session)
-			self.add_subwindow(export_dialog, 'Export Data')
+			if self.session.export_dialog is None:
+				self.session.export_dialog = ExportDialog(self.session)
+			self.add_subwindow(self.session.export_dialog, 'Export Data')
 		if q.text() == "Cascade":
 			self.mdi.cascadeSubWindows()
 		if q.text() == "Tiled":
@@ -205,9 +207,28 @@ class MainWindow(QtWidgets.QMainWindow):
 		return dataset_files
 	
 	def load_files(self, filelist):
-		loadfiles(self.session, filelist)
-		QtWidgets.QApplication.processEvents()
+		self.session.pbar_widget.reset_pbar()
+		self.session.pbar_widget.set_label_text('Loading Files...')
+		self.session.pbar_widget.set_label_sub_text('')
+		self.session.pbar_widget.show()
+		self.session.pbar_widget.set_pbar_range(0, len(filelist))
+		self.thread = QtCore.QThread()
+		self.worker = Worker(loadfiles, self.session, filelist)
+		self.worker.moveToThread(self.thread)
+		self.thread.started.connect(self.worker.run)
+		self.worker.signals.progress.connect(self.reportProgress)
+		self.worker.signals.finished.connect(self.oncomplete) # Reset button
+		self.thread.start()
+	
+	def reportProgress(self, n):
+		self.session.pbar_widget.set_pbar_value(n)
+	
+	def oncomplete(self):
+		self.thread.terminate()
+		self.session.pbar_widget.hide()
+		self.session.pbar_widget.reset_pbar()
 		self.close_dialog()
+		logger.info(f'Loaded {len(self.session.loaded_files)} files.')
 
 	def signal_accept(self, msg):
 		self.dialog.pbar_files.setValue(int(msg))

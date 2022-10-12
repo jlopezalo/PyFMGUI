@@ -19,13 +19,18 @@ def load_single_file(filepath):
     except Exception as error:
         logger.info(f'Failed to load {filepath} with error: {error}')
 
-def loadfiles(session, filelist):
+def loadfiles(session, filelist, progress_callback, range_callback, step_callback):
     files_to_load = [path for path in filelist if path not in session.loaded_files_paths]
+    loaded_files = []
+    count = 0
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        loaded_files = executor.map(load_single_file, files_to_load)
-    loaded_files = list(loaded_files)
+        # loaded_files = executor.map(load_single_file, files_to_load)
+        futures = [executor.submit(load_single_file, filepath) for filepath in files_to_load]
+        for future in concurrent.futures.as_completed(futures):
+            loaded_files.append(future.result())
+            count+=1
+            progress_callback.emit(count)
+    # loaded_files = list(loaded_files)
     # Loop and save files in the session
     for file_id, file in loaded_files:
         session.loaded_files[file_id] = file
-    
-    logger.info(f'Loaded {len(loaded_files)} / {len(files_to_load)} files.')

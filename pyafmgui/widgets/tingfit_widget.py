@@ -107,6 +107,8 @@ class TingFitWidget(QtGui.QWidget):
         # When thread starts run worker
         self.thread.started.connect(self.worker.run)
         self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.range.connect(self.setPbarRange)
+        self.worker.signals.step.connect(self.changestep)
         self.worker.signals.finished.connect(self.oncomplete) # Reset button
         # Start thread
         self.thread.start()
@@ -116,8 +118,14 @@ class TingFitWidget(QtGui.QWidget):
         self.updatePlots()
         self.updatePlots()
     
+    def changestep(self, step):
+        self.session.pbar_widget.set_label_sub_text(step)
+    
     def reportProgress(self, n):
         self.session.pbar_widget.set_pbar_value(n)
+    
+    def setPbarRange(self, n):
+        self.session.pbar_widget.set_pbar_range(0, n)
     
     def oncomplete(self):
         self.thread.terminate()
@@ -240,20 +248,23 @@ class TingFitWidget(QtGui.QWidget):
 
         if file_ting_result:
             for curve_indx, result in file_ting_result:
-                if result is None:
+                try:
+                    if result is None:
+                        continue
+                    else:
+                        curve_ting_result, curve_hertz_result = result
+                    if curve_indx == self.session.current_curve_index:
+                        self.ting_E = curve_ting_result.E0
+                        self.ting_exp = curve_ting_result.betaE
+                        self.ting_tc = curve_ting_result.tc
+                        self.ting_redchi = curve_ting_result.redchi
+                        self.ting_f0 = curve_ting_result.F0
+                        self.hertz_E = curve_hertz_result.E0
+                        self.hertz_d0 = curve_hertz_result.delta0
+                        self.hertz_redchi = curve_hertz_result.redchi
+                        self.fit_data = curve_ting_result
+                except Exception:
                     continue
-                else:
-                    curve_ting_result, curve_hertz_result = result
-                if curve_indx == self.session.current_curve_index:
-                    self.ting_E = curve_ting_result.E0
-                    self.ting_exp = curve_ting_result.betaE
-                    self.ting_tc = curve_ting_result.tc
-                    self.ting_redchi = curve_ting_result.redchi
-                    self.ting_f0 = curve_ting_result.F0
-                    self.hertz_E = curve_hertz_result.E0
-                    self.hertz_d0 = curve_hertz_result.delta0
-                    self.hertz_redchi = curve_hertz_result.redchi
-                    self.fit_data = curve_ting_result
 
         ext_data = force_curve.extend_segments[0][1]
         ret_data = force_curve.retract_segments[-1][1]
