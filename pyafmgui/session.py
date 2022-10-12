@@ -21,6 +21,8 @@ class Session:
         self.vdrag_widget = None
         self.microrheo_widget = None
         self.macro_widget = None
+        self.logger_wiget = None
+        self.pbar_widget = None
         self.piezo_char_data = None
         self.piezo_char_file_path = None
         self.sader_username = ""

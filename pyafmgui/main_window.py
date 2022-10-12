@@ -1,9 +1,14 @@
+# Import glob to find files in os
 import glob
+# Import GUI framework
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-
+# Import logging and get global logger
+import logging
+logger = logging.getLogger()
+# Get methods and objects needed
+from pyafmgui.const import pyFM_VERSION
 from pyafmgui.loadfiles import loadfiles
-
 from pyafmgui.widgets.exportdialog import ExportDialog
 from pyafmgui.widgets.hertzfit_widget import HertzFitWidget
 from pyafmgui.widgets.tingfit_widget import TingFitWidget
@@ -13,6 +18,8 @@ from pyafmgui.widgets.microrheo_widget import MicrorheoWidget
 from pyafmgui.widgets.dataviewer_widget import DataViewerWidget
 from pyafmgui.widgets.thermaltune_widget import ThermalTuneWidget
 from pyafmgui.widgets.macro_widget import MacroWidget
+from pyafmgui.widgets.logger_dialog import LoggerDialog
+from pyafmgui.widgets.progress_dialog import ProgressDialog
 
 class MainWindow(QtWidgets.QMainWindow):
 	def __init__(self, session, parent = None):
@@ -21,7 +28,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.init_gui()
 		
 	def init_gui(self):
-		self.setWindowTitle("PyAFMRheo v.0.0.4")
+		self.setWindowTitle(pyFM_VERSION)
 
 		self.mdi = QtWidgets.QMdiArea()
 		self.setCentralWidget(self.mdi)
@@ -73,6 +80,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		openMacro = QtGui.QAction("Macrowidget", self)
 		openMacro.setToolTip("Open new Macro window.")
 		openMacro.triggered.connect(self.open_analysis_window)
+
+		openLoggerDialog = QtGui.QAction("Logs", self)
+		openLoggerDialog.setToolTip("Open Logger Dialog.")
+		openLoggerDialog.triggered.connect(self.open_analysis_window)
 		
 		self.toolbar.addAction(openDataViewer)
 		self.toolbar.addAction(openCalibrationManager)
@@ -82,7 +93,19 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.toolbar.addAction(openVDrag)
 		self.toolbar.addAction(openMicrorheo)
 		self.toolbar.addAction(openMacro)
-	
+		self.toolbar.addAction(openLoggerDialog)
+
+		# Setup the logger widget
+		self.session.logger_wiget = LoggerDialog(self)
+		self.add_subwindow(self.session.logger_wiget, 'Logs')
+		logger.info('Started application')
+		logger.info('No data loaded')
+
+		# Setup the progressbar widget
+		self.session.pbar_widget = ProgressDialog()
+		# self.add_subwindow(self.session.pbar_widget, 'Progress Bar')
+		# self.session.pbar_widget.setVisible(False)
+
 	def add_subwindow(self, widget, tittle):
 		sub = QtWidgets.QMdiSubWindow()
 		sub.setWidget(widget)
@@ -134,6 +157,11 @@ class MainWindow(QtWidgets.QMainWindow):
 				widget_to_open = MacroWidget(self.session)
 			else:
 				self.session.macro_widget.showMaximized()
+		elif action == "Logs":
+			if self.session.logger_wiget is None:
+				widget_to_open = self.session.logger_wiget
+			else:
+				self.session.logger_wiget.showMaximized()
 		
 		if widget_to_open is not None:
 			self.add_subwindow(widget_to_open, action)

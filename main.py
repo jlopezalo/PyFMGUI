@@ -1,5 +1,4 @@
 import sys
-from platform import system, release
 import multiprocessing
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets

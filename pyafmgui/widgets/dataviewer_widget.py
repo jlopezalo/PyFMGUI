@@ -6,6 +6,17 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 
 import pyafmgui.const as cts
 
+def summarize_metadata(current_file_metadata):
+    return {
+        'File Name': current_file_metadata.get('Entry_filename'),
+        'File Type': current_file_metadata.get('file_type'),
+        'Instrument': current_file_metadata.get('Experimental_instrument'),
+        'Number of curves': current_file_metadata.get('Entry_tot_nb_curve'),
+        'Deflection Sens. nmbyV': current_file_metadata.get('defl_sens_nmbyV'),
+        'Spring Const. Nbym': current_file_metadata.get('spring_const_Nbym'),
+        'Height Channel': current_file_metadata.get('height_channel_key')
+        }
+
 class DataViewerWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
         super(DataViewerWidget, self).__init__(parent)
@@ -188,7 +199,7 @@ class DataViewerWidget(QtGui.QWidget):
 
         self.l.addItem(self.p1)
 
-        self.metadata_tree.setData(self.session.current_file.filemetadata)
+        self.metadata_tree.setData(summarize_metadata(self.session.current_file.filemetadata))
         
         self.session.current_curve_index = 0
         self.ROI.setPos(0, 0)

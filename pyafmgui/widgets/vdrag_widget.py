@@ -7,8 +7,11 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import numpy as np
 import pandas as pd
 from scipy.fft import fft, fftfreq
+import logging
+logger = logging.getLogger()
 
 import pyafmgui.const as cts
+from pyafmgui.threading import Worker
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
@@ -103,13 +106,46 @@ class VDragWidget(QtGui.QWidget):
         if not self.current_file:
             return
         if self.params.child('General Options').child('Compute All Files').value():
-            self.filedict = self.session.loaded_files
+            filedict = self.session.loaded_files
         else:
-            self.filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
+            filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
         params = get_params(self.params, "VDrag")
         params['piezo_char_data'] = self.session.piezo_char_data
-        compute(self.session, params,  self.filedict, "VDrag")
+        # compute(self.session, params,  self.filedict, "VDrag")
+        logger.info('Started VDrag...')
+        logger.info(f'Processing {len(filedict)} files')
+        logger.info(f'Analysis parameters used: {params}')
+        self.session.pbar_widget.reset_pbar()
+        self.session.pbar_widget.set_label_text('Computing VDrag...')
+        self.session.pbar_widget.show()
+        self.session.pbar_widget.set_pbar_range(0, len(filedict))
+        # Create thread to run compute
+        self.thread = QtCore.QThread()
+        # Create worker to run compute
+        self.worker = Worker(compute, self.session, params, filedict, "VDrag")
+        # Move worker to thread
+        self.worker.moveToThread(self.thread)
+        # When thread starts run worker
+        self.thread.started.connect(self.worker.run)
+        self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.finished.connect(self.oncomplete) # Reset button
+        # Start thread
+        self.thread.start()
+        # Final resets
+        self.pushButton.setEnabled(False) # Prevent user from starting another
+        # Update the gui
         self.updatePlots()
+    
+    def reportProgress(self, n):
+        self.session.pbar_widget.set_pbar_value(n)
+    
+    def oncomplete(self):
+        self.thread.terminate()
+        self.session.pbar_widget.hide()
+        self.session.pbar_widget.reset_pbar()
+        self.pushButton.setEnabled(True)
+        self.updatePlots()
+        logger.info('VDrag completed!')
     
     def load_piezo_char(self):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(

@@ -1,8 +1,18 @@
+import logging
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from .canti_list import canti_list
 
+# CURRENT VERSION #################################################
+# v.x.0.0 --> Major release
+# v.0.x.0 --> Minor release
+# v.0.0.x --> Bug fix
+pyFM_VERSION = "PyFM v.0.0.5"
+
+# FILE CONSTANTS ##################################################
 jpk_file_extensions = ('.jpk-force', '.jpk-force-map', '.jpk-qi-data')
 nanoscope_file_extensions = ('.spm', '.pfc')
+
+# ANALYSIS CONSTANTS ##############################################
 available_geometries = ['paraboloid', 'cone', 'pyramid']
 
 # SADER API params ################################################

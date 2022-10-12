@@ -3,8 +3,11 @@ from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import numpy as np
+import logging
+logger = logging.getLogger()
 
 import pyafmgui.const as cts
+from pyafmgui.threading import Worker
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
@@ -85,14 +88,44 @@ class HertzFitWidget(QtGui.QWidget):
         if not self.current_file:
             return
         if self.params.child('General Options').child('Compute All Files').value():
-            self.filedict = self.session.loaded_files
+            filedict = self.session.loaded_files
         else:
-            self.filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
-        
+            filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
         params = get_params(self.params, "HertzFit")
-        compute(self.session, params,  self.filedict, "HertzFit")
-        QtWidgets.QApplication.processEvents()
+        logger.info('Started ElasticityFit...')
+        logger.info(f'Processing {len(filedict)} files')
+        logger.info(f'Analysis parameters used: {params}')
+        self.session.pbar_widget.reset_pbar()
+        self.session.pbar_widget.set_label_text('Computing ElasticityFit...')
+        self.session.pbar_widget.show()
+        self.session.pbar_widget.set_pbar_range(0, len(filedict))
+        # Create thread to run compute
+        self.thread = QtCore.QThread()
+        # Create worker to run compute
+        self.worker = Worker(compute, self.session, params, filedict, "HertzFit")
+        # Move worker to thread
+        self.worker.moveToThread(self.thread)
+        # When thread starts run worker
+        self.thread.started.connect(self.worker.run)
+        self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.finished.connect(self.oncomplete) # Reset button
+        # Start thread
+        self.thread.start()
+        # Final resets
+        self.pushButton.setEnabled(False) # Prevent user from starting another
+        # Update the gui
         self.updatePlots()
+    
+    def reportProgress(self, n):
+        self.session.pbar_widget.set_pbar_value(n)
+    
+    def oncomplete(self):
+        self.thread.terminate()
+        self.session.pbar_widget.hide()
+        self.session.pbar_widget.reset_pbar()
+        self.pushButton.setEnabled(True)
+        self.updatePlots()
+        logger.info('ElasticityFit completed!')
 
     def update(self):
         self.current_file = self.session.current_file
@@ -194,16 +227,22 @@ class HertzFitWidget(QtGui.QWidget):
 
         file_hertz_result = self.session.hertz_fit_results.get(current_file_id, None)
 
+        # print(file_hertz_result)
+        # print(current_file_id)
+
         if file_hertz_result is not None:
             for curve_indx, curve_hertz_result in file_hertz_result:
                 if curve_hertz_result is None:
                     continue
                 if curve_indx == self.session.current_curve_index:
-                    self.hertz_E = curve_hertz_result.E0
-                    self.hertz_d0 = curve_hertz_result.delta0
-                    self.hertz_f0 = curve_hertz_result.f0
-                    self.hertz_redchi = curve_hertz_result.redchi
-                    self.fit_data = curve_hertz_result
+                    try:
+                        self.hertz_E = curve_hertz_result.E0
+                        self.hertz_d0 = curve_hertz_result.delta0
+                        self.hertz_f0 = curve_hertz_result.f0
+                        self.hertz_redchi = curve_hertz_result.redchi
+                        self.fit_data = curve_hertz_result
+                    except AttributeError:
+                        continue
 
         ext_data = force_curve.extend_segments[0][1]
         ret_data = force_curve.retract_segments[-1][1]

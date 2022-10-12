@@ -6,10 +6,12 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import numpy as np
 import pandas as pd
 from scipy.fft import fft, fftfreq
+import logging
+logger = logging.getLogger()
 
 import pyafmgui.const as cts
 from pyafmrheo.utils.signal_processing import *
-
+from pyafmgui.threading import Worker
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
@@ -17,6 +19,7 @@ class MicrorheoWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
         super(MicrorheoWidget, self).__init__(parent)
         self.session = session
+        self.methodkey = None
         self.current_file = None
         self.file_dict = {}
         self.session.microrheo_widget = self
@@ -107,18 +110,52 @@ class MicrorheoWidget(QtGui.QWidget):
         if not self.current_file:
             return
         if self.params.child('General Options').child('Compute All Files').value():
-            self.filedict = self.session.loaded_files
+            filedict = self.session.loaded_files
         else:
-            self.filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
+            filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
         if self.params.child('Analysis Params').child('Method').value() == "FFT":
-            methodkey = "Microrheo"
+            self.methodkey = "Microrheo"
         else:
-            methodkey = "MicrorheoSine"
+            self.methodkey = "MicrorheoSine"
         self.session.microrheo_results = {}
-        params = get_params(self.params, methodkey)
+        params = get_params(self.params, self.methodkey)
         params['piezo_char_data'] = self.session.piezo_char_data
-        compute(self.session, params, self.filedict, methodkey)
+        # compute(self.session, params, self.filedict, methodkey)
+        logger.info(f'Started {self.methodkey}...')
+        logger.info(f'Processing {len(filedict)} files')
+        logger.info(f'Analysis parameters used: {params}')
+        self.session.pbar_widget.reset_pbar()
+        self.session.pbar_widget.set_label_text(f'Computing {self.methodkey}...')
+        self.session.pbar_widget.show()
+        self.session.pbar_widget.set_pbar_range(0, len(filedict))
+        # Create thread to run compute
+        self.thread = QtCore.QThread()
+        # Create worker to run compute
+        self.worker = Worker(compute, self.session, params, filedict, self.methodkey)
+        # Move worker to thread
+        self.worker.moveToThread(self.thread)
+        # When thread starts run worker
+        self.thread.started.connect(self.worker.run)
+        self.worker.signals.progress.connect(self.reportProgress)
+        self.worker.signals.finished.connect(self.oncomplete) # Reset button
+        # Start thread
+        self.thread.start()
+        # Final resets
+        self.pushButton.setEnabled(False) # Prevent user from starting another
+        # Update the gui
         self.updatePlots()
+        self.updatePlots()
+    
+    def reportProgress(self, n):
+        self.session.pbar_widget.set_pbar_value(n)
+    
+    def oncomplete(self):
+        self.thread.terminate()
+        self.session.pbar_widget.hide()
+        self.session.pbar_widget.reset_pbar()
+        self.pushButton.setEnabled(True)
+        self.updatePlots()
+        logger.info(f'{self.methodkey} completed!')
     
     def load_piezo_char(self):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -253,6 +290,7 @@ class MicrorheoWidget(QtGui.QWidget):
                 if curve_microrheo_result is None:
                     continue
                 if curve_indx == self.session.current_curve_index:
+                    print(curve_microrheo_result)
                     self.freqs = curve_microrheo_result[0]
                     self.G_storage = np.array(curve_microrheo_result[1])
                     self.G_loss = np.array(curve_microrheo_result[2])
