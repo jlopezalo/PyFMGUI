@@ -40,8 +40,7 @@ def analyze_fdc(param_dict, fdc):
         routine = method_routines.get(param_dict['method'])
         return (fdc.file_id, fdc.curve_index, routine(fdc, param_dict))
     except Exception as error:
-        logger.info(f"Failed to process curve {fdc.curve_index} in file {fdc.file_id}: {error}")
-        return (fdc.file_id, fdc.curve_index, error)
+        return (fdc.file_id, fdc.curve_index, error, 'error')
 
 def get_method_to_session_vars(session):
     return {
@@ -164,6 +163,9 @@ def process_maps(session, params, filedict, method, progress_callback, range_cal
                 count+=1
                 progress_callback.emit(count)
         file_results = list(file_results)
+        for file_result in file_results:
+            if 'error' in file_result:
+                logger.info(f"Failed to process curve {file_result[1]} in file {file_result[0]}: {file_result[2]}")
         # Extend file results with the errors encountered in preprocessing
         file_results.extend(errors)
         # Save results

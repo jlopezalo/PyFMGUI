@@ -25,7 +25,7 @@ class ExportDialog(QtGui.QWidget):
 
         self.results_cb = QtWidgets.QComboBox()
         self.results_cb.addItems(result_types)
-        self.results_cb.currentIndexChanged.connect(self.get_results)
+        self.results_cb.currentIndexChanged.connect(self.update_table)
 
         self.layout = QtWidgets.QVBoxLayout()
 

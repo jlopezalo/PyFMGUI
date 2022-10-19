@@ -311,7 +311,7 @@ class VDragWidget(QtGui.QWidget):
                 self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
                 self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
             t0 = plot_time[-1]
-        
+
         if self.Hd is not None:
             self.p5.plot(distances, self.Hd.real, pen='r', symbol='o', symbolBrush='r', name='Hd Real')
             self.p5.plot(distances, self.Hd.imag, pen='b', symbol='o', symbolBrush='b', name='Hd Imag')
