@@ -6,6 +6,7 @@ from contextlib import redirect_stdout
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets
 import traceback
+from pyafmgui.widgets.python_highlighter import PythonHighlighter
 from pyafmgui.widgets.macro_example import macro_example
 
 # Libraries to be used in the macros

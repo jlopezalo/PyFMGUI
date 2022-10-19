@@ -293,7 +293,7 @@ class VDragWidget(QtGui.QWidget):
         for i, (seg_id, segment) in enumerate(curve_segments):
             time = segment.time
             plot_time = time + t0
-            if segment.segment_type == 'modulation':
+            if segment.segment_type == 'Modulation':
                 freq = segment.segment_metadata['frequency']
                 deltat = time[1] - time[0]
                 nfft = len(segment.vdeflection)
