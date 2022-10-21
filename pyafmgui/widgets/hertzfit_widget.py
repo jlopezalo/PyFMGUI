@@ -264,7 +264,7 @@ class HertzFitWidget(QtGui.QWidget):
         else:
             zheight  = ret_data.zheight[::-1]
             vdeflect = ret_data.vdeflection[::-1]
-        
+
         rov_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
         poc = [rov_PoC[0], 0]
 
