@@ -1,5 +1,6 @@
 # Import for multiprocessing
 import concurrent.futures
+import contextlib
 from functools import partial
 # Import logging and get global logger
 import logging
@@ -13,6 +14,11 @@ from pyafmrheo.routines.PiezoCharacterization import doPiezoCharacterization
 from pyafmrheo.routines.ViscousDragSteps import doViscousDragSteps
 from pyafmrheo.routines.MicrorheologyFFT import doMicrorheologyFFT
 from pyafmrheo.routines.MicrorheologySine import doMicrorheologySine
+
+def stop_process_pool(executor):
+    for _, process in executor._process.items():
+        process.terminate()
+    executor.shutdown()
 
 def prepare_map_fdc(file, params, curve_idx):
     try:
@@ -112,10 +118,13 @@ def process_sfc(session, params, filedict, method, progress_callback, range_call
     with concurrent.futures.ProcessPoolExecutor() as executor:
         # file_results = executor.map(partial(analyze_fdc, params), fdc_to_process)
         futures = [executor.submit(analyze_fdc, params, fdc) for fdc in fdc_to_process]
-        for future in concurrent.futures.as_completed(futures):
-            file_results.append(future.result())
-            count+=1
-            progress_callback.emit(count)
+        with contextlib.suppress(concurrent.futures.TimeoutError):
+            for future in concurrent.futures.as_completed(futures, timeout=cts.timeout_time):
+                file_results.append(future.result())
+                count+=1
+                progress_callback.emit(count)
+            # Cleanup
+            stop_process_pool(executor)
     # file_results = list(file_results)
     # Save results
     save_file_results(session, params, file_results)
@@ -139,10 +148,13 @@ def process_maps(session, params, filedict, method, progress_callback, range_cal
         step_callback.emit('Step 1/2: Preprocessing')
         with concurrent.futures.ProcessPoolExecutor() as executor:
             futures = [executor.submit(prepare_map_fdc, file, params, curveidx) for curveidx in range(nb_curves)]
-            for future in concurrent.futures.as_completed(futures):
-                raw_fdc_to_process.append(future.result())
-                count+=1
-                progress_callback.emit(count)
+            with contextlib.suppress(concurrent.futures.TimeoutError):
+                for future in concurrent.futures.as_completed(futures, timeout=cts.timeout_time):
+                    raw_fdc_to_process.append(future.result())
+                    count+=1
+                    progress_callback.emit(count)
+                # Cleanup
+                stop_process_pool(executor)
         # Check for errors
         for item in raw_fdc_to_process:
             if type(item) is tuple:
@@ -158,10 +170,13 @@ def process_maps(session, params, filedict, method, progress_callback, range_cal
         with concurrent.futures.ProcessPoolExecutor() as executor:
             # file_results = executor.map(partial(analyze_fdc, params), fdc_to_process)
             futures = [executor.submit(analyze_fdc, params, fdc) for fdc in fdc_to_process]
-            for future in concurrent.futures.as_completed(futures):
-                file_results.append(future.result())
-                count+=1
-                progress_callback.emit(count)
+            with contextlib.suppress(concurrent.futures.TimeoutError):
+                for future in concurrent.futures.as_completed(futures, timeout=cts.timeout_time):
+                    file_results.append(future.result())
+                    count+=1
+                    progress_callback.emit(count)
+                # Cleanup
+                stop_process_pool(executor)
         file_results = list(file_results)
         for file_result in file_results:
             if 'error' in file_result:

@@ -20,6 +20,9 @@ SADER_API_version = 'Python API/0.20'
 SADER_API_type = 'text/xml'
 SADER_API_url = 'https://sadermethod.org/api/1.1/api.php'
 
+# MULTIPROCESSING params ##########################################
+timeout_time = 5 # s
+
 # Default parameters ##############################################
 
 class AnalysisParams(pTypes.GroupParameter):
