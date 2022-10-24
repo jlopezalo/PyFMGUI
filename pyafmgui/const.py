@@ -6,7 +6,7 @@ from .canti_list import canti_list
 # v.x.0.0 --> Major release
 # v.0.x.0 --> Minor release
 # v.0.0.x --> Bug fix
-pyFM_VERSION = "PyFM v.0.0.5"
+pyFM_VERSION = "PyFM v.0.0.6"
 
 # FILE CONSTANTS ##################################################
 jpk_file_extensions = ('.jpk-force', '.jpk-force-map', '.jpk-qi-data')
@@ -21,7 +21,7 @@ SADER_API_type = 'text/xml'
 SADER_API_url = 'https://sadermethod.org/api/1.1/api.php'
 
 # MULTIPROCESSING params ##########################################
-timeout_time = 20 # s
+timeout_time = 5 # s
 
 # Default parameters ##############################################
 
