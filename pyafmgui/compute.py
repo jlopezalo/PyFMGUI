@@ -81,12 +81,14 @@ def save_file_results(session, params, file_results):
         print(f"Session does not support {params['method']}")
         return
     # For each file save results
-    with contextlib.suppress(ValueError):
-        for file_id, curve_idx, analysis_result in file_results:
-            if file_id in session_save_var.keys():
-                session_save_var[file_id].append((curve_idx, analysis_result))
-            else:
-                session_save_var[file_id] = [(curve_idx, analysis_result)]
+    for item in file_results:
+        if len(item) > 3:
+            continue
+        file_id, curve_idx, analysis_result = item
+        if file_id in session_save_var.keys():
+            session_save_var[file_id].append((curve_idx, analysis_result))
+        else:
+            session_save_var[file_id] = [(curve_idx, analysis_result)]
 
 def process_sfc(session, params, filedict, method, progress_callback, range_callback, step_callback):
     # Get curves to process for each file to process
