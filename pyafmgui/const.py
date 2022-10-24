@@ -21,7 +21,7 @@ SADER_API_type = 'text/xml'
 SADER_API_url = 'https://sadermethod.org/api/1.1/api.php'
 
 # MULTIPROCESSING params ##########################################
-timeout_time = 5 # s
+timeout_time = 20 # s
 
 # Default parameters ##############################################
 
