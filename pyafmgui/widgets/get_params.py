@@ -8,10 +8,14 @@ def get_params(params, method):
     param_dict['k'] = analysis_params.child('Spring Constant').value()
     if method in ("PiezoChar", "VDrag", "Microrheo", "MicrorheoSine"):
         param_dict['max_freq'] = analysis_params.child('Max Frequency').value()
+    if method in ("VDrag", "Microrheo", "MicrorheoSine"):
+        correction_params = params.child('Correction Params')
+        param_dict['corr_amp'] = correction_params.child('Correct Amplitude').value()
     if method in ("PiezoChar", "VDrag"):
         return param_dict
     if method in ("Microrheo", "MicrorheoSine"):
         param_dict['bcoef'] = analysis_params.child('B Coef').value()
+        param_dict['wc'] = analysis_params.child('Working Indentation').value() / 1e9 # nm
     param_dict['contact_model'] = analysis_params.child('Contact Model').value()
     if param_dict['contact_model'] == "paraboloid":
         param_dict['tip_param'] = analysis_params.child('Tip Radius').value() / 1e9 # nm

@@ -78,8 +78,9 @@ def save_file_results(session, params, file_results):
     # For each file save results
     for item in file_results:
         if len(item) > 3:
-            continue
-        file_id, curve_idx, analysis_result = item
+            file_id, curve_idx, analysis_result, _ = item
+        else:
+            file_id, curve_idx, analysis_result = item
         if file_id in session_save_var.keys():
             session_save_var[file_id].append((curve_idx, analysis_result))
         else:
@@ -116,7 +117,7 @@ def process_sfc(session, params, filedict, method, progress_callback, range_call
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = [executor.submit(analyze_fdc, params, fdc) for fdc in fdc_to_process]
         with contextlib.suppress(concurrent.futures.TimeoutError):
-            for future in concurrent.futures.as_completed(futures, timeout=cts.timeout_time):
+            for future in concurrent.futures.as_completed(futures):
                 file_results.append(future.result())
                 count+=1
                 progress_callback.emit(count)
@@ -143,7 +144,7 @@ def process_maps(session, params, filedict, method, progress_callback, range_cal
         with concurrent.futures.ProcessPoolExecutor() as executor:
             futures = [executor.submit(prepare_map_fdc, file, params, curveidx) for curveidx in range(nb_curves)]
             with contextlib.suppress(concurrent.futures.TimeoutError):
-                for future in concurrent.futures.as_completed(futures, timeout=cts.timeout_time):
+                for future in concurrent.futures.as_completed(futures):
                     raw_fdc_to_process.append(future.result())
                     count+=1
                     progress_callback.emit(count)
@@ -163,7 +164,7 @@ def process_maps(session, params, filedict, method, progress_callback, range_cal
             # file_results = executor.map(partial(analyze_fdc, params), fdc_to_process)
             futures = [executor.submit(analyze_fdc, params, fdc) for fdc in fdc_to_process]
             with contextlib.suppress(concurrent.futures.TimeoutError):
-                for future in concurrent.futures.as_completed(futures, timeout=cts.timeout_time):
+                for future in concurrent.futures.as_completed(futures):
                     file_results.append(future.result())
                     count+=1
                     progress_callback.emit(count)

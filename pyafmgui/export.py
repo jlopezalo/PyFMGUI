@@ -71,6 +71,8 @@ def unpack_vdrag_result(row_dict, vdrag_result):
     row_dict['Hd_real'] = vdrag_result[2].real
     row_dict['Hd_imag'] = vdrag_result[2].imag
     row_dict['distances'] = vdrag_result[4]
+    row_dict['fi_degrees'] = vdrag_result[5]
+    row_dict['amp_quotient'] = vdrag_result[6]
     return row_dict
 
 def unpack_microrheo_result(row_dict, microrheo_result):
@@ -78,6 +80,10 @@ def unpack_microrheo_result(row_dict, microrheo_result):
     row_dict['G_storage'] = microrheo_result[1]
     row_dict['G_loss'] = microrheo_result[2]
     row_dict['losstan'] = np.array(row_dict['G_storage']) / np.array(row_dict['G_loss'])
+    row_dict['fi_degrees'] = microrheo_result[-4]
+    row_dict['amp_quotient'] = microrheo_result[-3]
+    row_dict['B(0)'] = microrheo_result[-2]
+    row_dict['w_ind'] = microrheo_result[-1]
     return row_dict
 
 def get_file_results(result_type, file_metadata_and_results):
@@ -166,9 +172,9 @@ def prepare_export_results(session, progress_callback, range_callback, step_call
             if result_type == 'piezochar_results':
                 outputdf = outputdf.explode(['frequency', 'fi_degrees', 'amp_quotient'])
             elif result_type == 'vdrag_results':
-                outputdf = outputdf.explode(['frequency', 'Bh', 'Hd_real', 'Hd_imag', 'distances'])
+                outputdf = outputdf.explode(['frequency', 'Bh', 'Hd_real', 'Hd_imag', 'distances', 'fi_degrees', 'amp_quotient'])
             elif result_type == 'microrheo_results':
-                outputdf = outputdf.explode(['frequency', 'G_storage', 'G_loss', 'losstan'])
+                outputdf = outputdf.explode(['frequency', 'G_storage', 'G_loss', 'losstan', 'fi_degrees', 'amp_quotient'])
             # Sort values by file path and curve index
             outputdf.sort_values(by=['file_path', 'curve_idx'])
             # Assign results to proper result type

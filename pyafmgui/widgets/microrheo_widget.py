@@ -15,6 +15,8 @@ from pyafmgui.threading import Worker
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
+from pyafmrheo.utils.force_curves import get_poc_RoV_method
+
 class MicrorheoWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
         super(MicrorheoWidget, self).__init__(parent)
@@ -90,6 +92,8 @@ class MicrorheoWidget(QtGui.QWidget):
         self.p5 = pg.PlotItem()
         self.p6 = pg.PlotItem()
         self.p7 = pg.PlotItem()
+        self.p8 = pg.PlotItem()
+        self.p8legend = self.p8.addLegend()
 
         self.p3legend = self.p3.addLegend()
         self.p4legend = self.p4.addLegend()
@@ -145,7 +149,6 @@ class MicrorheoWidget(QtGui.QWidget):
         # Final resets
         self.pushButton.setEnabled(False) # Prevent user from starting another
         # Update the gui
-        self.updatePlots()
         self.updatePlots()
     
     def changestep(self, step):
@@ -265,6 +268,9 @@ class MicrorheoWidget(QtGui.QWidget):
         self.p4legend.clear()
         self.p5.clear()
         self.p6.clear()
+        self.p7.clear()
+        self.p8.clear()
+        self.p8legend.clear()
 
         self.freqs = None
         self.G_storage = None
@@ -282,12 +288,17 @@ class MicrorheoWidget(QtGui.QWidget):
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         method = analysis_params.child('Method').value()
 
+        hertz_params = self.params.child('Hertz Fit Params')
+        poc_win = hertz_params.child('PoC Window').value() / 1e9
+
         force_curve = current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
+        if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
+            force_curve.shift_height()
+        # force_curve_segments = force_curve.get_segments()
+        modulation_segments = force_curve.modulation_segments
 
-        modulation_segs = force_curve.modulation_segments
-
-        if modulation_segs == []:
+        if modulation_segments == []:
             self.open_msg_box(f'No modulation segments found in file:\n {current_file_id}')
             return
 
@@ -299,7 +310,7 @@ class MicrorheoWidget(QtGui.QWidget):
                     if curve_microrheo_result is None:
                         continue
                     if curve_indx == self.session.current_curve_index:
-                        print(curve_microrheo_result)
+                        # print(curve_microrheo_result)
                         self.freqs = curve_microrheo_result[0]
                         self.G_storage = np.array(curve_microrheo_result[1])
                         self.G_loss = np.array(curve_microrheo_result[2])
@@ -309,15 +320,28 @@ class MicrorheoWidget(QtGui.QWidget):
                             self.defl_results = curve_microrheo_result[4]
                 except Exception:
                     continue
-                    
+        
+        ext_data = force_curve.extend_segments[0][1]
+        self.p7.plot(ext_data.zheight, ext_data.vdeflection)
+        rov_PoC = get_poc_RoV_method(ext_data.zheight, ext_data.vdeflection, poc_win)
+        poc = [rov_PoC[0], 0]
+        force_curve.get_force_vs_indentation(poc, spring_k)
+        indapp = ext_data.indentation
+        forceapp = ext_data.force
+        maxind = indapp.max()*1e9
+        analysis_params.child('Computed Working Indentation').setValue(maxind)
+        self.p8.plot(indapp, forceapp)
+        vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
+        self.p8.addItem(vertical_line, ignoreBounds=True)
+
         t0 = 0
         t0_2 = 0
-        n_segments = len(modulation_segs)
+        n_segments = len(modulation_segments)
         if method == 'FFT':
-            for i, (_, segment) in enumerate(modulation_segs):
+            for i, (_, segment) in enumerate(modulation_segments):
                 time = segment.time
                 freq = segment.segment_metadata['frequency']
-                plot_time = time + t0
+                label = f"{freq} Hz"
                 deltat = time[1] - time[0]
                 nfft = len(segment.vdeflection)
                 W = fftfreq(nfft, d=deltat)
@@ -328,8 +352,9 @@ class MicrorheoWidget(QtGui.QWidget):
                 L = np.arange(1, np.floor(nfft/2), dtype='int')
                 self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{freq} Hz")
                 self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{freq} Hz")
-                self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
-                self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")
+                plot_time = time + t0
+                self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=label)
+                self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=label)
                 t0 = plot_time[-1]
         
             self.p3.setLabel('left', 'zHeight PSD')
@@ -345,10 +370,10 @@ class MicrorheoWidget(QtGui.QWidget):
             self.p4.addLegend()
 
         elif method == 'Sine Fit':
-            for i, (_, segment) in enumerate(modulation_segs):
-                freq = segment.segment_metadata['frequency']
+            for i, (_, segment) in enumerate(modulation_segments):
                 time = segment.time
-                plot_time_1 = time + t0
+                freq = segment.segment_metadata['frequency']
+                label = f"{freq} Hz"
                 zheight, vdeflection, time_2 =\
                     detrend_rolling_average(freq, segment.zheight, segment.vdeflection, time, 'zheight', 'deflection', [])
                 indentation = zheight -  vdeflection
@@ -361,8 +386,9 @@ class MicrorheoWidget(QtGui.QWidget):
                     deflection_res = self.defl_results[idx].eval(time=time_2)
                     self.p3.plot(plot_time_2, -1 * indentation_res, pen='g')
                     self.p4.plot(plot_time_2, deflection_res, pen='g')
-                self.p1.plot(plot_time_1, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
-                self.p2.plot(plot_time_1, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")
+                plot_time_1 = time + t0
+                self.p1.plot(plot_time_1, segment.zheight, pen=(i,n_segments), name=label)
+                self.p2.plot(plot_time_1, segment.vdeflection, pen=(i,n_segments), name=label)
                 t0 = plot_time_1[-1]
                 t0_2 = plot_time_2[-1]
 
@@ -391,12 +417,12 @@ class MicrorheoWidget(QtGui.QWidget):
         
         self.p1.setLabel('left', 'zHeight', 'm')
         self.p1.setLabel('bottom', 'Time', 's')
-        self.p1.setTitle("zHeight-Time")
+        self.p1.setTitle("Modulation zHeight-Time")
         self.p1.addLegend()
 
         self.p2.setLabel('left', 'Deflection', 'm')
         self.p2.setLabel('bottom', 'Time', 's')
-        self.p2.setTitle("Deflection-Time")
+        self.p2.setTitle("Modulation Deflection-Time")
         self.p2.addLegend()
         
         self.p5.setLabel('left', 'Complex Modulus', 'Pa')
@@ -409,7 +435,25 @@ class MicrorheoWidget(QtGui.QWidget):
         self.p6.setLabel('bottom', 'Frequency', 'Hz')
         self.p6.setTitle("Loss Tangent-Frequency")
         self.p6.setLogMode(True, False)
+
+        self.p7.setLabel('left', 'Deflection', 'm')
+        self.p7.setLabel('bottom', 'zHeight', 'm')
+        self.p7.setTitle("Approach zHeight-Deflection")
+        self.p7.addLegend()
+
+        self.p8.setLabel('left', 'Force', 'N')
+        self.p8.setLabel('bottom', 'Indentation', 'm')
+        self.p8.setTitle("Approach Force-Indentation")
+        self.p8.addLegend()
+
+        style = pg.PlotDataItem(pen=None)
+        self.p8legend.addItem(style, f'Computed Working Ind.: {maxind:.2f} nm')
+        if not analysis_params.child('Overwrite Working Ind.').value():
+            analysis_params.child('Working Indentation').setValue(maxind)
         
+        self.l.addItem(self.p7)
+        self.l.addItem(self.p8)
+        self.l.nextRow()
         self.l.addItem(self.p1)
         self.l.addItem(self.p2)
         self.l.nextRow()

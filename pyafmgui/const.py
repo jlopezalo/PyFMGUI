@@ -6,7 +6,7 @@ from .canti_list import canti_list
 # v.x.0.0 --> Major release
 # v.0.x.0 --> Minor release
 # v.0.0.x --> Bug fix
-pyFM_VERSION = "PyFM v.0.0.6"
+pyFM_VERSION = "PyFM v.0.0.7"
 
 # FILE CONSTANTS ##################################################
 jpk_file_extensions = ('.jpk-force', '.jpk-force-map', '.jpk-qi-data')
@@ -46,6 +46,9 @@ class AnalysisParams(pTypes.GroupParameter):
         if self.mode == "microrheo":
             self.addChildren([
                 {'name': 'Method', 'type': 'list', 'limits':['FFT', 'Sine Fit']},
+                {'name': 'Computed Working Indentation', 'type': 'float', 'value': None, 'units':'nm', 'readonly':True},
+                {'name': 'Working Indentation', 'type': 'float', 'value': None, 'units':'nm'},
+                {'name': 'Overwrite Working Ind.', 'type': 'bool', 'value':False},
                 {'name': 'Max Frequency', 'type': 'int', 'value': None, 'units':'Hz'},
                 {'name': 'B Coef', 'type': 'float', 'value': None, 'units':'Ns/m'}
             ])
@@ -261,6 +264,10 @@ rheo_params = {'name': 'Analysis Params', 'type': 'group', 'children': [
         {'name': 'Max Frequency', 'type': 'int', 'value': None, 'units':'Hz'}
     ]}
 
+correction_params = {'name': 'Correction Params', 'type': 'group', 'children': [
+        {'name': 'Correct Amplitude', 'type': 'bool', 'value': False}
+    ]}
+
 ambient_params = {'name': 'Ambient Params', 'type': 'group', 'children': [
         {'name': 'Temperature', 'type': 'float', 'value': 25, 'units':'°C'},
         {'name': 'Rel. Humidity', 'type': 'float', 'value': 68, 'units':'%'}
@@ -281,6 +288,6 @@ tingfit_params = [general_params, AnalysisParams(mode='tingfit', name='Analysis 
 
 piezochar_params = [general_params, rheo_params]
 
-vdrag_params = [general_params, rheo_params]
+vdrag_params = [general_params, correction_params, rheo_params]
 
-microrheo_params = [general_params, AnalysisParams(mode='microrheo', name='Analysis Params'), HertzFitParams(name='Hertz Fit Params')]
+microrheo_params = [general_params, correction_params, AnalysisParams(mode='microrheo', name='Analysis Params'), HertzFitParams(name='Hertz Fit Params')]
