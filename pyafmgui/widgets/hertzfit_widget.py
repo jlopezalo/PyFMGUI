@@ -291,6 +291,13 @@ class HertzFitWidget(QtGui.QWidget):
             self.indentation  = ret_data.indentation
             self.force = ret_data.force
             self.force = self.force - self.force[-1]
+        
+        if hertz_params.child('Downsample Signal').value():
+            pts_downsample = hertz_params.child('Downsample Pts.').value()
+            downfactor= len(self.indentation) // pts_downsample
+            idxDown = list(range(0, len(self.indentation), downfactor))
+            self.indentation = self.indentation[idxDown]
+            self.force = self.force[idxDown]
 
         self.p1.plot(self.indentation, self.force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
@@ -407,3 +414,4 @@ class HertzFitWidget(QtGui.QWidget):
         hertz_params.child('Min Indentation').sigValueChanged.connect(self.update_fit_range)
         hertz_params.child('Max Force').sigValueChanged.connect(self.update_fit_range)
         hertz_params.child('Min Force').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Downsample Signal').sigValueChanged.connect(self.updatePlots)

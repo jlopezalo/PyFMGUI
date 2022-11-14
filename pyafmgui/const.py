@@ -92,6 +92,8 @@ class HertzFitParams(pTypes.GroupParameter):
             {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Min Force', 'type': 'float', 'value': None, 'units':'nN'},
             {'name': 'Max Force', 'type': 'float', 'value': None, 'units':'nN'},
+            {'name': 'Downsample Signal', 'type': 'bool', 'value':False},
+            {'name': 'Downsample Pts.', 'type': 'int', 'value': 300},
             {'name': 'Auto Init E0', 'type': 'bool', 'value':True},
             {'name': 'Init E0', 'type': 'int', 'value': 1000, 'units':'Pa'},
             {'name': 'Init d0', 'type': 'float', 'value': 0, 'units':'nm'},

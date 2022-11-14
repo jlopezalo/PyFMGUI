@@ -29,6 +29,8 @@ def get_params(params, method):
         hertz_params = params.child('Hertz Fit Params')
         param_dict['poisson'] = hertz_params.child('Poisson Ratio').value()
         param_dict['poc_win'] = hertz_params.child('PoC Window').value() / 1e9 #nm
+        param_dict['downsample_flag'] = hertz_params.child('Downsample Signal').value()
+        param_dict['pts_downsample'] = hertz_params.child('Downsample Pts.').value()
         param_dict['auto_init_E0'] = hertz_params.child('Auto Init E0').value()
         param_dict['E0'] = hertz_params.child('Init E0').value()
         param_dict['d0'] = hertz_params.child('Init d0').value() / 1e9 #nm

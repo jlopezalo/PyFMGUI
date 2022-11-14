@@ -262,9 +262,9 @@ class ThermalTuneWidget(QtGui.QWidget):
             self.k0_air, self.GCI_cant_springConst_air, self.involsValue_air, self.invOLS_H_air =\
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
-                        A1_air, fR1_air, Q1_air, self.Tc, self.RH, 'air',
-                        self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
-                    )
+                    A1_air, fR1_air, Q1_air, self.Tc, self.RH, 'air',
+                    self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
+                )
         # Liquid
         if self.inliquid_thermal_ampl is not None and self.inliquid_thermal_freq is not None:
             minfreq, maxfreq = self.lq_roi.getRegion()
@@ -283,7 +283,7 @@ class ThermalTuneWidget(QtGui.QWidget):
             self.k0_lq, self.GCI_cant_springConst_lq, self.involsValue_lq, self.invOLS_H_lq =\
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
-                        A1_lq, fR1_lq, Q1_lq, self.Tc, self.RH, 'water', 
-                        self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
-                    )
+                    A1_lq, fR1_lq, Q1_lq, self.Tc, self.RH, 'water', 
+                    self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
+                )
         self.update_plot()
