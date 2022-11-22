@@ -11,7 +11,7 @@ from pyafmgui.threading import Worker
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
-from pyafmrheo.utils.force_curves import get_poc_RoV_method, correct_viscous_drag, correct_tilt
+from pyafmrheo.utils.force_curves import get_poc_RoV_method, get_poc_regulaFalsi_method, correct_viscous_drag, correct_tilt
 
 class TingFitWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -227,7 +227,9 @@ class TingFitWidget(QtGui.QWidget):
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         spring_k = analysis_params.child('Spring Constant').value()
         
+        poc_method = ting_params.child('PoC Method').value()
         poc_win = ting_params.child('PoC Window').value() / 1e9
+        poc_sigma = ting_params.child('Sigma').value()
         vdragcorr = ting_params.child('Correct Viscous Drag').value()
         polyordr = ting_params.child('Poly. Order').value()
         rampspeed = ting_params.child('Ramp Speed').value() / 1e6
@@ -272,8 +274,12 @@ class TingFitWidget(QtGui.QWidget):
         self.p3.plot(ext_data.zheight, ext_data.vdeflection)
         self.p3.plot(ret_data.zheight, ret_data.vdeflection)
 
-        rov_PoC = get_poc_RoV_method(ext_data.zheight, ext_data.vdeflection, poc_win)
-        poc = [rov_PoC[0], 0]
+        if poc_method == 'RoV':
+            comp_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
+        else:
+            comp_PoC = get_poc_regulaFalsi_method(zheight, vdeflect, poc_sigma)
+
+        poc = [comp_PoC[0], 0]
 
         # Perform tilt correction
         if correct_tilt_flag:
@@ -287,7 +293,7 @@ class TingFitWidget(QtGui.QWidget):
             ext_data.vdeflection = corr_defl[:idx]
             ret_data.vdeflection = corr_defl[idx:]
 
-        vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
+        vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='Init d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
             d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})

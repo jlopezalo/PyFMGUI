@@ -11,7 +11,7 @@ from pyafmgui.threading import Worker
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
-from pyafmrheo.utils.force_curves import get_poc_RoV_method, correct_tilt
+from pyafmrheo.utils.force_curves import get_poc_RoV_method, get_poc_regulaFalsi_method, correct_tilt
 
 class HertzFitWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -224,7 +224,9 @@ class HertzFitWidget(QtGui.QWidget):
         tilt_max_offset = analysis_params.child('Max Tilt Offset').value() / 1e9
         
         hertz_params = self.params.child('Hertz Fit Params')
+        poc_method = hertz_params.child('PoC Method').value()
         poc_win = hertz_params.child('PoC Window').value() / 1e9
+        poc_sigma = hertz_params.child('Sigma').value()
 
         force_curve = self.current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
@@ -265,8 +267,12 @@ class HertzFitWidget(QtGui.QWidget):
             zheight  = ret_data.zheight[::-1]
             vdeflect = ret_data.vdeflection[::-1]
 
-        rov_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
-        poc = [rov_PoC[0], 0]
+        if poc_method == 'RoV':
+            comp_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
+        else:
+            comp_PoC = get_poc_regulaFalsi_method(zheight, vdeflect, poc_sigma)
+
+        poc = [comp_PoC[0], 0]
 
         # Perform tilt correction
         if correct_tilt_flag:
@@ -300,7 +306,7 @@ class HertzFitWidget(QtGui.QWidget):
             self.force = self.force[idxDown]
 
         self.p1.plot(self.indentation, self.force)
-        vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
+        vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='Init d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
             d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})

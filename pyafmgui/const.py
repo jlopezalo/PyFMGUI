@@ -86,7 +86,9 @@ class HertzFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
+            {'name': 'PoC Method', 'type': 'list', 'limits':['regulaFalsi', 'RoV']},
             {'name': 'PoC Window', 'type': 'int', 'value': 350, 'units':'nm'},
+            {'name': 'Sigma', 'type': 'int', 'value': 0},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
             {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
@@ -102,14 +104,26 @@ class HertzFitParams(pTypes.GroupParameter):
             {'name': 'Init Slope', 'type': 'float', 'value': 0}
         ])
 
+        self.poc_mode = self.param('PoC Method')
+        self.poc_mode.sigValueChanged.connect(self.poc_mode_changed)
+
         self.range_mode = self.param('Fit Range Type')
         self.range_mode.sigValueChanged.connect(self.range_mode_changed)
 
         self.fit_line = self.param('Fit Line to non contact')
         self.fit_line.sigValueChanged.connect(self.fit_line_changed)
 
+        self.poc_mode_changed()
         self.range_mode_changed()
         self.fit_line_changed()
+    
+    def poc_mode_changed(self):
+        if self.poc_mode.value() == 'RoV':
+            self.param('Sigma').show(False)
+            self.param('PoC Window').show(True)
+        else:
+            self.param('Sigma').show(True)
+            self.param('PoC Window').show(False)
         
     def range_mode_changed(self):
         if self.range_mode.value() == 'full':
@@ -141,7 +155,9 @@ class TingFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
+            {'name': 'PoC Method', 'type': 'list', 'limits':['regulaFalsi', 'RoV']},
             {'name': 'PoC Window', 'type': 'int', 'value': 350, 'units':'nm'},
+            {'name': 'Sigma', 'type': 'int', 'value': 0},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
             {'name': 'Min Indentation', 'type': 'float', 'value': None, 'units':'nm'},
             {'name': 'Max Indentation', 'type': 'float', 'value': None, 'units':'nm'},
@@ -168,6 +184,9 @@ class TingFitParams(pTypes.GroupParameter):
             {'name': 'Smoothing Window', 'type': 'int', 'value': 5, 'units':'points'}
         ])
 
+        self.poc_mode = self.param('PoC Method')
+        self.poc_mode.sigValueChanged.connect(self.poc_mode_changed)
+
         self.range_mode = self.param('Fit Range Type')
         self.range_mode.sigValueChanged.connect(self.range_mode_changed)
 
@@ -180,10 +199,19 @@ class TingFitParams(pTypes.GroupParameter):
         self.vdrag_corr = self.param('Correct Viscous Drag')
         self.vdrag_corr.sigValueChanged.connect(self.vdrag_changed)
 
+        self.poc_mode_changed()
         self.range_mode_changed()
         self.fit_line_changed()
         self.model_type_changed()
         self.vdrag_changed()
+    
+    def poc_mode_changed(self):
+        if self.poc_mode.value() == 'RoV':
+            self.param('Sigma').show(False)
+            self.param('PoC Window').show(True)
+        else:
+            self.param('Sigma').show(True)
+            self.param('PoC Window').show(False)
     
     def range_mode_changed(self):
         if self.range_mode.value() == 'full':

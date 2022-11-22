@@ -243,6 +243,7 @@ class ThermalTuneWidget(QtGui.QWidget):
             self.open_msg_box("Could not Login!")
     
     def do_thermalfit(self):
+        # Change to the routines present in PyFMRheo
         # Air
         self.get_params()
         if self.inair_thermal_ampl is not None and self.inair_thermal_freq is not None:

@@ -3,6 +3,8 @@ import multiprocessing
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
+# Imports needed to give PyQT5 reference about these
+# objects when freezing the code.
 import pyqtgraph.console.template_pyqt5
 import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt5
 import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt5
@@ -13,7 +15,9 @@ from pyafmgui.main_window import MainWindow
 from pyafmgui.session import Session
 
 def main():
+	# Create PyQT5 application object
 	app = QtWidgets.QApplication(sys.argv)
+	
 	# Force the style to be the same on all OSs:
 	app.setStyle("Fusion")
 	
@@ -35,13 +39,23 @@ def main():
 	
 	# Set colour palette on the application.
 	app.setPalette(palette)
+	
+	# Create session object to hold data and results
 	session = Session()
+
+	# Create and show main MDI window
 	ex = MainWindow(session)
 	ex.show()
 	sys.exit(app.exec())
 	
 if __name__ == '__main__':
+	# Fork is the deault method for multiprocessing in MacOS and Linux.
+	# I have had isssues with the locking of processes and the application
+	# failing. To overcome this issue, spawn is denoted as the default method.
+	# This is documented in this ticket: https://bugs.python.org/issue33725
+	multiprocessing.set_start_method('spawn')
 	# Add support for multiprocessing in frozen app
 	# # See http://docs.python.org/3/library/multiprocessing.html
 	multiprocessing.freeze_support()
+	# Launch
 	main()

@@ -1,5 +1,8 @@
 def get_params(params, method):
+    # Create dictionary to hold parameters
     param_dict = {}
+    
+    # Define general parameters
     param_dict['compute_all_curves'] = params.child('General Options').child('Compute All Curves').value()
     param_dict['method'] = method
     analysis_params = params.child('Analysis Params')
@@ -21,14 +24,19 @@ def get_params(params, method):
         param_dict['tip_param'] = analysis_params.child('Tip Radius').value() / 1e9 # nm
     elif param_dict['contact_model'] in ("cone", "pyramid"):
         param_dict['tip_param'] = analysis_params.child('Tip Angle').value()
+    
     param_dict['curve_seg'] = analysis_params.child('Curve Segment').value()
     param_dict['correct_tilt'] = analysis_params.child('Correct Tilt').value()
     param_dict['tilt_min_offset'] = analysis_params.child('Min Tilt Offset').value() / 1e9 #nm
     param_dict['tilt_max_offset'] = analysis_params.child('Max Tilt Offset').value() / 1e9 #nm
+    
+    # HertzFit specific parameters
     if method  in ("HertzFit", "Microrheo", "MicrorheoSine"):
         hertz_params = params.child('Hertz Fit Params')
         param_dict['poisson'] = hertz_params.child('Poisson Ratio').value()
+        param_dict['poc_method'] = hertz_params.child('PoC Method').value()
         param_dict['poc_win'] = hertz_params.child('PoC Window').value() / 1e9 #nm
+        param_dict['sigma'] = hertz_params.child('Sigma').value()
         param_dict['downsample_flag'] = hertz_params.child('Downsample Signal').value()
         param_dict['pts_downsample'] = hertz_params.child('Downsample Pts.').value()
         param_dict['auto_init_E0'] = hertz_params.child('Auto Init E0').value()
@@ -42,10 +50,19 @@ def get_params(params, method):
         param_dict['max_force'] = hertz_params.child('Max Force').value() / 1e9 #nN
         param_dict['min_force'] = hertz_params.child('Min Force').value() / 1e9 #nN
         param_dict['fit_line'] = hertz_params.child('Fit Line to non contact').value()
+    
+    # TingFit specific parameters
     elif method == "TingFit":
+        # Define downsample for hertzfit flag
+        # Decide how to handle this in the future:
+        # - Allow user to downsample for hertz fit
+        param_dict['downsample_flag'] = False
+        # Define ting params
         ting_params = params.child('Ting Fit Params')
         param_dict['poisson'] = ting_params.child('Poisson Ratio').value()
-        param_dict['poc_win'] = ting_params.child('PoC Window').value() / 1e9 #nm
+        param_dict['poc_method'] = hertz_params.child('PoC Method').value()
+        param_dict['poc_win'] = hertz_params.child('PoC Window').value() / 1e9 #nm
+        param_dict['sigma'] = hertz_params.child('Sigma').value()
         param_dict['max_ind'] = ting_params.child('Max Indentation').value() / 1e9 #nm
         param_dict['min_ind'] = ting_params.child('Min Indentation').value() / 1e9 #nm
         param_dict['max_force'] = ting_params.child('Max Force').value() / 1e9 #nN

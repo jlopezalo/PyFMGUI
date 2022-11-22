@@ -15,7 +15,7 @@ from pyafmgui.threading import Worker
 from pyafmgui.compute import compute
 from pyafmgui.widgets.get_params import get_params
 
-from pyafmrheo.utils.force_curves import get_poc_RoV_method
+from pyafmrheo.utils.force_curves import get_poc_RoV_method, get_poc_regulaFalsi_method
 
 class MicrorheoWidget(QtGui.QWidget):
     def __init__(self, session, parent=None):
@@ -289,7 +289,9 @@ class MicrorheoWidget(QtGui.QWidget):
         method = analysis_params.child('Method').value()
 
         hertz_params = self.params.child('Hertz Fit Params')
+        poc_method = hertz_params.child('PoC Method').value()
         poc_win = hertz_params.child('PoC Window').value() / 1e9
+        poc_sigma = hertz_params.child('Sigma').value()
 
         force_curve = current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
@@ -323,15 +325,19 @@ class MicrorheoWidget(QtGui.QWidget):
         
         ext_data = force_curve.extend_segments[0][1]
         self.p7.plot(ext_data.zheight, ext_data.vdeflection)
-        rov_PoC = get_poc_RoV_method(ext_data.zheight, ext_data.vdeflection, poc_win)
-        poc = [rov_PoC[0], 0]
+        if poc_method == 'RoV':
+            comp_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
+        else:
+            comp_PoC = get_poc_regulaFalsi_method(zheight, vdeflect, poc_sigma)
+
+        poc = [comp_PoC[0], 0]
         force_curve.get_force_vs_indentation(poc, spring_k)
         indapp = ext_data.indentation
         forceapp = ext_data.force
         maxind = indapp.max()*1e9
         analysis_params.child('Computed Working Indentation').setValue(maxind)
         self.p8.plot(indapp, forceapp)
-        vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='RoV d0', labelOpts={'color':'y', 'position':0.5})
+        vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='Init d0', labelOpts={'color':'y', 'position':0.5})
         self.p8.addItem(vertical_line, ignoreBounds=True)
 
         t0 = 0
@@ -462,7 +468,6 @@ class MicrorheoWidget(QtGui.QWidget):
         self.l.nextRow()
         self.l.addItem(self.p5)
         self.l.addItem(self.p6)
-        
 
     def updateParams(self):
         # Updates params related to the current file
