@@ -9,7 +9,7 @@ from .canti_list import canti_list
 pyFM_VERSION = "PyFM v.0.0.7"
 
 # FILE CONSTANTS ##################################################
-jpk_file_extensions = ('.jpk-force', '.jpk-force-map', '.jpk-qi-data')
+jpk_file_extensions = ('jpk-force', 'jpk-force-map', 'jpk-qi-data')
 nanoscope_file_extensions = ('.spm', '.pfc')
 
 # ANALYSIS CONSTANTS ##############################################

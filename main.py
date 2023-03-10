@@ -5,10 +5,10 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 
 # Imports needed to give PyQT5 reference about these
 # objects when freezing the code.
-import pyqtgraph.console.template_pyqt5
-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt5
-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt5
-import pyqtgraph.imageview.ImageViewTemplate_pyqt5
+# import pyqtgraph.console.template_pyqt5
+# import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt5
+# import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt5
+# import pyqtgraph.imageview.ImageViewTemplate_pyqt5
 
 
 from pyafmgui.main_window import MainWindow

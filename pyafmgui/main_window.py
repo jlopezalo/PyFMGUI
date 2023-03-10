@@ -172,9 +172,9 @@ class MainWindow(QtWidgets.QMainWindow):
 			fname, _ = QtWidgets.QFileDialog.getOpenFileName(
 				self, 
 				'Open file', 
-				'./', 
+				r'./', 
 				"""
-				JPK files (*.jpk-force *.jpk-force-map *.jpk-qi-data);;
+				JPK files (*.jpk-force *.jpk-force-map *.jpk-qi-data, *.jpk-force.zip *.jpk-force-map.zip *.jpk-qi-data.zip);;
 				Nanoscope files (*.spm *.pfc)
 				"""
 			)
@@ -182,7 +182,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.load_files([fname])
 		if q.text() == "Load Folder":
 			dirname = QtWidgets.QFileDialog.getExistingDirectory(
-				self, 'Choose Directory', './'
+				self, 'Choose Directory', r'./'
 			)
 			if dirname != "" and dirname is not None:
 				valid_files = self.getFileList(dirname)
@@ -200,7 +200,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.remove_all_files_and_results()
 	
 	def getFileList(self, directory):
-		types = ('*.jpk-force', '*.jpk-force-map', '*.jpk-qi-data', '*.spm', '*.pfc')
+		types = ('*.jpk-force', '*.jpk-force-map', '*.jpk-qi-data', '*.jpk-force.zip', '*.jpk-force-map.zip', '*.jpk-qi-data.zip', '*.spm', '*.pfc')
 		dataset_files = []
 		for files in types:
 			dataset_files.extend(glob.glob(f'{directory}/**/{files}', recursive=True))
