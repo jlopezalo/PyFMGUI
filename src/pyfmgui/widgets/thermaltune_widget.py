@@ -7,13 +7,13 @@ from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-from pyafmreader import loadfile
-from pyafmrheo.models.calibration import Stark_Chi_force_constant
-from pyafmrheo.models.sho import SHOModel
+from pyfmreader import loadfile
+from pyfmrheo.models.calibration import Stark_Chi_force_constant
+from pyfmrheo.models.sho import SHOModel
 
-import pyafmgui.const as cts
+import pyfmgui.const as cts
 
-class ThermalTuneWidget(QtGui.QWidget):
+class ThermalTuneWidget(QtWidgets.QWidget):
     def __init__(self, session, parent=None):
         super(ThermalTuneWidget, self).__init__(parent)
         self.session = session
@@ -77,7 +77,7 @@ class ThermalTuneWidget(QtGui.QWidget):
         user_pwd_label.setMaximumWidth(150)
         self.user_pwd_text = QtWidgets.QLineEdit()
         self.user_pwd_text.setMaximumHeight(40)
-        self.user_pwd_text.setEchoMode(QtGui.QLineEdit.Password)
+        self.user_pwd_text.setEchoMode(QtWidgets.QLineEdit.Password)
         login_bttn = QtWidgets.QPushButton()
         login_bttn.setText("Login")
         login_bttn.clicked.connect(self.sader_login)

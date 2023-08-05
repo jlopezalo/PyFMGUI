@@ -11,8 +11,8 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 # import pyqtgraph.imageview.ImageViewTemplate_pyqt5
 
 
-from pyafmgui.main_window import MainWindow
-from pyafmgui.session import Session
+from pyfmgui.main_window import MainWindow
+from pyfmgui.session import Session
 
 def main():
 	# Create PyQT5 application object

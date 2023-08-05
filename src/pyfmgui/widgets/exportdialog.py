@@ -2,10 +2,10 @@ import PyQt5
 from pyqtgraph.Qt import QtWidgets, QtCore, QtGui
 from pyqtgraph import TableWidget
 
-from pyafmgui.threading import Worker
-from pyafmgui.export import result_types, prepare_export_results, export_results
+from pyfmgui.threading import Worker
+from pyfmgui.export import result_types, prepare_export_results, export_results
 
-class ExportDialog(QtGui.QWidget):
+class ExportDialog(QtWidgets.QWidget):
     def __init__(self, session):
         super().__init__()
 

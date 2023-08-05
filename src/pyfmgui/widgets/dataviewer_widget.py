@@ -4,7 +4,7 @@ import pyqtgraph as pg
 import numpy as np
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-import pyafmgui.const as cts
+import pyfmgui.const as cts
 
 def summarize_metadata(current_file_metadata):
     return {
@@ -17,7 +17,7 @@ def summarize_metadata(current_file_metadata):
         'Height Channel': current_file_metadata.get('height_channel_key')
         }
 
-class DataViewerWidget(QtGui.QWidget):
+class DataViewerWidget(QtWidgets.QWidget):
     def __init__(self, session, parent=None):
         super(DataViewerWidget, self).__init__(parent)
         self.session = session

@@ -6,7 +6,7 @@ from .canti_list import canti_list
 # v.x.0.0 --> Major release
 # v.0.x.0 --> Minor release
 # v.0.0.x --> Bug fix
-pyFM_VERSION = "PyFM v.0.0.7"
+pyFM_VERSION = "PyFM v.0.1.1"
 
 # FILE CONSTANTS ##################################################
 jpk_file_extensions = ('jpk-force', 'jpk-force-map', 'jpk-qi-data')
@@ -39,8 +39,11 @@ class AnalysisParams(pTypes.GroupParameter):
             {'name': 'Tip Area', 'type': 'float', 'value': None},
             {'name': 'Curve Segment', 'type': 'list', 'limits':['extend', 'retract']},
             {'name': 'Correct Tilt', 'type': 'bool', 'value':False},
-            {'name': 'Min Tilt Offset', 'type': 'float', 'value': 10, 'units':'nm'},
-            {'name': 'Max Tilt Offset', 'type': 'float', 'value': 1000, 'units':'nm'}
+            {'name': 'Offset Type', 'type': 'list', 'limits': ['percentage', 'absolute']},
+            {'name': 'Perc. Min Offset', 'type': 'float', 'value': 0},
+            {'name': 'Perc. Max Offset', 'type': 'float', 'value': 20},
+            {'name': 'Abs. Min Offset', 'type': 'float', 'value': 10, 'units':'nm'},
+            {'name': 'Abs. Max Offset', 'type': 'float', 'value': 1000, 'units':'nm'}
         ])
 
         if self.mode == "microrheo":
@@ -56,11 +59,11 @@ class AnalysisParams(pTypes.GroupParameter):
         self.contact_model = self.param('Contact Model')
         self.contact_model.sigValueChanged.connect(self.contact_model_changed)
 
-        self.correct_tilt = self.param('Correct Tilt')
-        self.correct_tilt.sigValueChanged.connect(self.correct_tilt_changed)
+        self.offset_type = self.param('Offset Type')
+        self.offset_type.sigValueChanged.connect(self.offset_type_changed)
 
         self.contact_model_changed()
-        self.correct_tilt_changed()
+        self.offset_type_changed()
 
     def contact_model_changed(self):
         if self.contact_model.value() == 'paraboloid':
@@ -73,20 +76,24 @@ class AnalysisParams(pTypes.GroupParameter):
             self.param('Tip Radius').show(False)
             self.param('Tip Area').show(False)
     
-    def correct_tilt_changed(self):
-        if self.correct_tilt.value():
-            self.param('Min Tilt Offset').show(True)
-            self.param('Max Tilt Offset').show(True)
+    def offset_type_changed(self):
+        if self.offset_type.value() == 'percentage':
+            self.param('Perc. Min Offset').show(True)
+            self.param('Perc. Max Offset').show(True)
+            self.param('Abs. Min Offset').show(False)
+            self.param('Abs. Max Offset').show(False)
         else:
-            self.param('Min Tilt Offset').show(False)
-            self.param('Max Tilt Offset').show(False)
+            self.param('Perc. Min Offset').show(False)
+            self.param('Perc. Max Offset').show(False)
+            self.param('Abs. Min Offset').show(True)
+            self.param('Abs. Max Offset').show(True)
 
 class HertzFitParams(pTypes.GroupParameter):
     def __init__(self, **opts):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Method', 'type': 'list', 'limits':['regulaFalsi', 'RoV']},
+            {'name': 'PoC Method', 'type': 'list', 'limits':['RoV', 'regulaFalsi']},
             {'name': 'PoC Window', 'type': 'int', 'value': 350, 'units':'nm'},
             {'name': 'Sigma', 'type': 'int', 'value': 0},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},
@@ -155,7 +162,7 @@ class TingFitParams(pTypes.GroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
         self.addChildren([
             {'name': 'Poisson Ratio', 'type': 'float', 'value': 0.5},
-            {'name': 'PoC Method', 'type': 'list', 'limits':['regulaFalsi', 'RoV']},
+            {'name': 'PoC Method', 'type': 'list', 'limits':['RoV', 'regulaFalsi']},
             {'name': 'PoC Window', 'type': 'int', 'value': 350, 'units':'nm'},
             {'name': 'Sigma', 'type': 'int', 'value': 0},
             {'name': 'Fit Range Type', 'type': 'list', 'limits': ['full', 'indentation', 'force']},

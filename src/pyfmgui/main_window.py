@@ -7,20 +7,20 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import logging
 logger = logging.getLogger()
 # Get methods and objects needed
-from pyafmgui.const import pyFM_VERSION
-from pyafmgui.loadfiles import loadfiles
-from pyafmgui.threading import Worker
-from pyafmgui.widgets.exportdialog import ExportDialog
-from pyafmgui.widgets.hertzfit_widget import HertzFitWidget
-from pyafmgui.widgets.tingfit_widget import TingFitWidget
-from pyafmgui.widgets.piezochar_widget import PiezoCharWidget
-from pyafmgui.widgets.vdrag_widget import VDragWidget
-from pyafmgui.widgets.microrheo_widget import MicrorheoWidget
-from pyafmgui.widgets.dataviewer_widget import DataViewerWidget
-from pyafmgui.widgets.thermaltune_widget import ThermalTuneWidget
-from pyafmgui.widgets.macro_widget import MacroWidget
-from pyafmgui.widgets.logger_dialog import LoggerDialog
-from pyafmgui.widgets.progress_dialog import ProgressDialog
+from pyfmgui.const import pyFM_VERSION
+from pyfmgui.loadfiles import loadfiles
+from pyfmgui.threading import Worker
+from pyfmgui.widgets.exportdialog import ExportDialog
+from pyfmgui.widgets.hertzfit_widget import HertzFitWidget
+from pyfmgui.widgets.tingfit_widget import TingFitWidget
+from pyfmgui.widgets.piezochar_widget import PiezoCharWidget
+from pyfmgui.widgets.vdrag_widget import VDragWidget
+from pyfmgui.widgets.microrheo_widget import MicrorheoWidget
+from pyfmgui.widgets.dataviewer_widget import DataViewerWidget
+from pyfmgui.widgets.thermaltune_widget import ThermalTuneWidget
+from pyfmgui.widgets.macro_widget import MacroWidget
+from pyfmgui.widgets.logger_dialog import LoggerDialog
+from pyfmgui.widgets.progress_dialog import ProgressDialog
 
 class MainWindow(QtWidgets.QMainWindow):
 	def __init__(self, session, parent = None):
@@ -121,46 +121,64 @@ class MainWindow(QtWidgets.QMainWindow):
 		if action == "Data Viewer":
 			if self.session.data_viewer_widget is None:
 				widget_to_open = DataViewerWidget(self.session)
+			elif self.session.data_viewer_widget.isMaximized():
+				self.session.data_viewer_widget.showMinimized()
 			else:
 				self.session.data_viewer_widget.showMaximized()
 		elif action == "Thermal Tune":
 			if self.session.thermal_tune_widget is None:
 				widget_to_open = ThermalTuneWidget(self.session)
+			elif self.session.thermal_tune_widget.isMaximized():
+				self.session.thermal_tune_widget.showMinimized()
 			else:
 				self.session.thermal_tune_widget.showMaximized()
 		elif action == "Elasticity Fit":
 			if self.session.hertz_fit_widget is None:
 				widget_to_open = HertzFitWidget(self.session)
+			elif self.session.hertz_fit_widget.isMaximized():
+				self.session.hertz_fit_widget.showMinimized()
 			else:
 				self.session.hertz_fit_widget.showMaximized()
 		elif action == "Viscoelasticity Fit":
 			if self.session.ting_fit_widget is None:
 				widget_to_open = TingFitWidget(self.session)
+			elif self.session.ting_fit_widget.isMaximized():
+				self.session.ting_fit_widget.showMinimized()
 			else:
 				self.session.ting_fit_widget.showMaximized()
 		elif action == "Piezo Characterization":
 			if self.session.piezo_char_widget is None:
 				widget_to_open = PiezoCharWidget(self.session)
+			elif self.session.piezo_char_widget.isMaximized():
+				self.session.piezo_char_widget.showMinimized()
 			else:
 				self.session.piezo_char_widget.showMaximized()
 		elif action == "Viscous Drag":
 			if self.session.vdrag_widget is None:
 				widget_to_open = VDragWidget(self.session)
+			elif self.session.vdrag_widget.isMaximized():
+				self.session.vdrag_widget.showMinimized()
 			else:
 				self.session.vdrag_widget.showMaximized()
 		elif action == "Microrheology":
 			if self.session.microrheo_widget is None:
 				widget_to_open = MicrorheoWidget(self.session)
+			elif self.session.microrheo_widget.isMaximized():
+				self.session.microrheo_widget.showMinimized()
 			else:
 				self.session.microrheo_widget.showMaximized()
 		elif action == "Macrowidget":
 			if self.session.macro_widget is None:
 				widget_to_open = MacroWidget(self.session)
+			elif self.session.macro_widget.isMaximized():
+				self.session.macro_widget.showMinimized()
 			else:
 				self.session.macro_widget.showMaximized()
 		elif action == "Logs":
 			if self.session.logger_wiget is None:
 				widget_to_open = self.session.logger_wiget
+			elif self.session.logger_wiget.isMaximized():
+				self.session.logger_wiget.showMinimized()
 			else:
 				self.session.logger_wiget.showMaximized()
 		

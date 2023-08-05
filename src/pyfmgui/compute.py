@@ -6,14 +6,14 @@ from functools import partial
 import logging
 logger = logging.getLogger()
 # Import constants
-import pyafmgui.const as cts
+import pyfmgui.const as cts
 # Import predefined routines from PyFMRheo
-from pyafmrheo.routines.HertzFit import doHertzFit
-from pyafmrheo.routines.TingFit import doTingFit
-from pyafmrheo.routines.PiezoCharacterization import doPiezoCharacterization
-from pyafmrheo.routines.ViscousDragSteps import doViscousDragSteps
-from pyafmrheo.routines.MicrorheologyFFT import doMicrorheologyFFT
-from pyafmrheo.routines.MicrorheologySine import doMicrorheologySine
+from pyfmrheo.routines.HertzFit import doHertzFit
+from pyfmrheo.routines.TingFit import doTingFit
+from pyfmrheo.routines.PiezoCharacterization import doPiezoCharacterization
+from pyfmrheo.routines.ViscousDragSteps import doViscousDragSteps
+from pyfmrheo.routines.MicrorheologyFFT import doMicrorheologyFFT
+from pyfmrheo.routines.MicrorheologySine import doMicrorheologySine
 
 def prepare_map_fdc(file, params, curve_idx):
     try:

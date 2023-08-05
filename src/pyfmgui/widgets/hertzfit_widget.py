@@ -6,21 +6,23 @@ import numpy as np
 import logging
 logger = logging.getLogger()
 
-import pyafmgui.const as cts
-from pyafmgui.threading import Worker
-from pyafmgui.compute import compute
-from pyafmgui.widgets.get_params import get_params
+import pyfmgui.const as cts
+from pyfmgui.threading import Worker
+from pyfmgui.compute import compute
+from pyfmgui.widgets.get_params import get_params
 
-from pyafmrheo.utils.force_curves import get_poc_RoV_method, get_poc_regulaFalsi_method, correct_viscous_drag, correct_tilt
+from pyfmrheo.utils.force_curves import get_poc_RoV_method, get_poc_regulaFalsi_method, correct_tilt, correct_offset
 
-class TingFitWidget(QtGui.QWidget):
+class HertzFitWidget(QtWidgets.QWidget):
     def __init__(self, session, parent=None):
-        super(TingFitWidget, self).__init__(parent)
+        super(HertzFitWidget, self).__init__(parent)
         self.session = session
         self.current_file = None
-        self.tilt_roi = None
+        self.min_val_line = None
+        self.max_val_line = None
+        self.offset_roi = None
         self.file_dict = {}
-        self.session.ting_fit_widget = self
+        self.session.hertz_fit_widget = self
         self.init_gui()
         if self.session.loaded_files != {}:
             self.updateCombo()
@@ -38,7 +40,7 @@ class TingFitWidget(QtGui.QWidget):
         self.combobox = QtWidgets.QComboBox()
         self.combobox.currentTextChanged.connect(self.file_changed)
 
-        self.params = Parameter.create(name='params', children=cts.tingfit_params)
+        self.params = Parameter.create(name='params', children=cts.hertzfit_params)
 
         self.paramTree = ParameterTree()
         self.paramTree.setParameters(self.params, showTop=False)
@@ -75,7 +77,7 @@ class TingFitWidget(QtGui.QWidget):
         main_layout.addWidget(self.l, 3)
     
     def closeEvent(self, evnt):
-        self.session.ting_fit_widget = None
+        self.session.hertz_fit_widget = None
     
     def clear(self):
         self.combobox.clear()
@@ -89,19 +91,17 @@ class TingFitWidget(QtGui.QWidget):
             filedict = self.session.loaded_files
         else:
             filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
-        params = get_params(self.params, "TingFit")
-        # compute(self.session, params,  self.filedict, "TingFit")
-        logger.info('Started ViscoelasticityFit...')
+        params = get_params(self.params, "HertzFit")
+        logger.info('Started ElasticityFit...')
         logger.info(f'Processing {len(filedict)} files')
         logger.info(f'Analysis parameters used: {params}')
         self.session.pbar_widget.reset_pbar()
-        self.session.pbar_widget.set_label_text('Computing ViscoelasticityFit...')
+        self.session.pbar_widget.set_label_text('Computing ElasticityFit...')
         self.session.pbar_widget.show()
-        self.session.pbar_widget.set_pbar_range(0, len(filedict))
         # Create thread to run compute
         self.thread = QtCore.QThread()
         # Create worker to run compute
-        self.worker = Worker(compute, self.session, params, filedict, "TingFit")
+        self.worker = Worker(compute, self.session, params, filedict, "HertzFit")
         # Move worker to thread
         self.worker.moveToThread(self.thread)
         # When thread starts run worker
@@ -115,7 +115,6 @@ class TingFitWidget(QtGui.QWidget):
         # Final resets
         self.pushButton.setEnabled(False) # Prevent user from starting another
         # Update the gui
-        self.updatePlots()
         self.updatePlots()
     
     def changestep(self, step):
@@ -133,7 +132,7 @@ class TingFitWidget(QtGui.QWidget):
         self.session.pbar_widget.reset_pbar()
         self.pushButton.setEnabled(True)
         self.updatePlots()
-        logger.info('ViscoelasticityFit completed!')
+        logger.info('ElasticityFit completed!')
 
     def update(self):
         self.current_file = self.session.current_file
@@ -159,11 +158,6 @@ class TingFitWidget(QtGui.QWidget):
                 rows, cols = shape[0], shape[1]
                 curve_coords = np.arange(cols*rows).reshape((cols, rows))
             self.correlogram.setImage(img)
-            shape = img.shape
-            rows, cols = shape[0], shape[1]
-            self.plotItem.setXRange(0, cols)
-            self.plotItem.setYRange(0, rows)
-            curve_coords = np.arange(cols*rows).reshape((cols, rows))
             if self.current_file.filemetadata['file_type'] == "jpk-force-map":
                 curve_coords = np.asarray([row[::(-1)**i] for i, row in enumerate(curve_coords)])
             self.session.map_coords = curve_coords
@@ -172,9 +166,10 @@ class TingFitWidget(QtGui.QWidget):
         self.updatePlots()
     
     def file_changed(self, file_id):
-        self.session.current_file = self.session.loaded_files[file_id]
-        self.session.current_curve_index = 0
-        self.update()
+        if file_id != '':
+            self.session.current_file = self.session.loaded_files[file_id]
+            self.session.current_curve_index = 0
+            self.update()
     
     def updateCombo(self):
         self.combobox.clear()
@@ -197,12 +192,13 @@ class TingFitWidget(QtGui.QWidget):
             if self.session.data_viewer_widget is not None:
                 self.session.data_viewer_widget.ROI.setPos(x, y)
                 self.session.data_viewer_widget.updateCurve()
+    
+    def manual_override(self):
+        pass
 
     def updatePlots(self):
-
         if not self.current_file:
             return
-
         self.l.clear()
         self.p1.clear()
         self.p2.clear()
@@ -212,33 +208,27 @@ class TingFitWidget(QtGui.QWidget):
 
         self.hertz_E = None
         self.hertz_d0 = 0
-        self.ting_d0 = 0
         self.fit_data = None
         self.residual = None
-        self.ting_tc = None
 
         current_file_id = self.current_file.filemetadata['Entry_filename']
         current_curve_indx = self.session.current_curve_index
-
+        
         analysis_params = self.params.child('Analysis Params')
-        ting_params = self.params.child('Ting Fit Params')
-
         height_channel = analysis_params.child('Height Channel').value()
         deflection_sens = analysis_params.child('Deflection Sensitivity').value() / 1e9
         spring_k = analysis_params.child('Spring Constant').value()
-        
-        poc_method = ting_params.child('PoC Method').value()
-        poc_win = ting_params.child('PoC Window').value() / 1e9
-        poc_sigma = ting_params.child('Sigma').value()
-        vdragcorr = ting_params.child('Correct Viscous Drag').value()
-        polyordr = ting_params.child('Poly. Order').value()
-        rampspeed = ting_params.child('Ramp Speed').value() / 1e6
-        contact_offset = ting_params.child('Contact Offset').value() / 1e6
-        t0_scaling = ting_params.child('t0').value()
-        pts_downsample = ting_params.child('Downsample Pts.').value()
+        curve_seg = analysis_params.child('Curve Segment').value()
         correct_tilt_flag = analysis_params.child('Correct Tilt').value()
-        tilt_min_offset = analysis_params.child('Min Tilt Offset').value() / 1e9
-        tilt_max_offset = analysis_params.child('Max Tilt Offset').value() / 1e9
+        
+        hertz_params = self.params.child('Hertz Fit Params')
+        poc_method = hertz_params.child('PoC Method').value()
+        poc_win = hertz_params.child('PoC Window').value() / 1e9
+        poc_sigma = hertz_params.child('Sigma').value()
+
+        print(self.current_file)
+        print(type(self.current_file))
+        print(self.current_file.filemetadata['file_path'])
 
         force_curve = self.current_file.getcurve(current_curve_indx)
         force_curve.preprocess_force_curve(deflection_sens, height_channel)
@@ -246,25 +236,22 @@ class TingFitWidget(QtGui.QWidget):
         if self.session.current_file.filemetadata['file_type'] in cts.jpk_file_extensions:
             force_curve.shift_height()
 
-        file_ting_result = self.session.ting_fit_results.get(current_file_id, None)
+        file_hertz_result = self.session.hertz_fit_results.get(current_file_id, None)
 
-        if file_ting_result:
-            for curve_indx, result in file_ting_result:
+        # print(file_hertz_result)
+        # print(current_file_id)
+
+        if file_hertz_result is not None:
+            for curve_indx, curve_hertz_result in file_hertz_result:
                 try:
-                    if result is None:
+                    if curve_hertz_result is None:
                         continue
-                    else:
-                        curve_ting_result, curve_hertz_result = result
                     if curve_indx == self.session.current_curve_index:
-                        self.ting_E = curve_ting_result.E0
-                        self.ting_exp = curve_ting_result.betaE
-                        self.ting_tc = curve_ting_result.tc
-                        self.ting_redchi = curve_ting_result.redchi
-                        self.ting_f0 = curve_ting_result.F0
                         self.hertz_E = curve_hertz_result.E0
                         self.hertz_d0 = curve_hertz_result.delta0
+                        self.hertz_f0 = curve_hertz_result.f0
                         self.hertz_redchi = curve_hertz_result.redchi
-                        self.fit_data = curve_ting_result
+                        self.fit_data = curve_hertz_result
                 except Exception:
                     continue
 
@@ -274,102 +261,88 @@ class TingFitWidget(QtGui.QWidget):
         self.p3.plot(ext_data.zheight, ext_data.vdeflection)
         self.p3.plot(ret_data.zheight, ret_data.vdeflection)
 
-        if poc_method == 'RoV':
-            comp_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
-        else:
-            comp_PoC = get_poc_regulaFalsi_method(zheight, vdeflect, poc_sigma)
-
-        poc = [comp_PoC[0], 0]
+        if curve_seg == 'extend': self.seg_data  = ext_data
+        else: self.seg_data  = ret_data
+        
+        self.update_tilt_range()
 
         # Perform tilt correction
         if correct_tilt_flag:
-            height = np.r_[ext_data.zheight, ret_data.zheight]
-            deflection = np.r_[ext_data.vdeflection, ret_data.vdeflection]
-            idx = len(ext_data.zheight)
-            corr_defl = correct_tilt(
-                height, deflection, poc[0],
-                tilt_max_offset, tilt_min_offset
+            self.seg_data.vdeflection = correct_tilt(
+                self.seg_data.zheight, self.seg_data.vdeflection, self.maxoffset, self.minoffset
             )
-            ext_data.vdeflection = corr_defl[:idx]
-            ret_data.vdeflection = corr_defl[idx:]
+        else:
+            self.seg_data.vdeflection = correct_offset(
+                self.seg_data.zheight, self.seg_data.vdeflection, self.maxoffset, self.minoffset
+            )
 
+        comp_PoC = [0, 0]
+        
+        if poc_method == 'RoV':
+            comp_PoC = get_poc_RoV_method(self.seg_data.zheight, self.seg_data.vdeflection, poc_win)
+        else:
+            comp_PoC = get_poc_regulaFalsi_method(self.seg_data.zheight, self.seg_data.vdeflection, poc_sigma)
+
+        if comp_PoC is not None:
+            poc = [comp_PoC[0], 0]
+        else:
+            poc = [0, 0]
+
+        force_curve.get_force_vs_indentation(poc, spring_k)
+
+        if curve_seg == 'extend':
+            self.indentation  = ext_data.indentation
+            self.force = ext_data.force
+            self.force = self.force - self.force[0]
+            
+        else:
+            self.indentation  = ret_data.indentation
+            self.force = ret_data.force
+            self.force = self.force - self.force[-1]
+        
+        if hertz_params.child('Downsample Signal').value():
+            pts_downsample = hertz_params.child('Downsample Pts.').value()
+            downfactor= len(self.indentation) // pts_downsample
+            idxDown = list(range(0, len(self.indentation), downfactor))
+            self.indentation = self.indentation[idxDown]
+            self.force = self.force[idxDown]
+
+        self.p1.plot(self.indentation, self.force)
         vertical_line = pg.InfiniteLine(pos=0, angle=90, pen='y', movable=False, label='Init d0', labelOpts={'color':'y', 'position':0.5})
         self.p1.addItem(vertical_line, ignoreBounds=True)
         if self.hertz_d0 != 0:
             d0_vertical_line = pg.InfiniteLine(pos=self.hertz_d0, angle=90, pen='g', movable=False, label='Hertz d0', labelOpts={'color':'g', 'position':0.7})
             self.p1.addItem(d0_vertical_line, ignoreBounds=True)
-            poc[0] += self.hertz_d0
-        force_curve.get_force_vs_indentation(poc, spring_k)
-        if vdragcorr:
-            ext_data.force, ret_data.force = correct_viscous_drag(
-                ext_data.indentation, ext_data.force, ret_data.indentation, ret_data.force, poly_order=polyordr, speed=rampspeed)
-        self.p1.plot(ext_data.indentation, ext_data.force)
-        self.p1.plot(ret_data.indentation, ret_data.force)
-        
-        idx_tc = (np.abs(ext_data.indentation - 0)).argmin()
-        t0 = ext_data.time[-1]
-        indentation = np.r_[ext_data.indentation, ret_data.indentation]
-        time = np.r_[ext_data.time, ret_data.time + t0]
-        force = np.r_[ext_data.force, ret_data.force]
-        fit_mask = indentation > (-1 * contact_offset)
-        tc = time[idx_tc]
-        ind_fit = indentation[fit_mask]
-        force_fit = force[fit_mask]
-        force_fit = force_fit - force_fit[0]
-        time_fit = time[fit_mask]
-        tc_fit = tc-time_fit[0]
-        time_fit = time_fit - time_fit[0] - tc_fit
-        
-        downfactor= len(time_fit) // pts_downsample
-        idxDown = list(range(0, len(time_fit), downfactor))
 
-        self.p2.plot(time_fit[idxDown], force_fit[idxDown])
+        self.p2.plot(self.indentation - self.hertz_d0, self.force)
 
-        self.update_tilt_range()
-
+        self.update_fit_range()
+ 
         if self.fit_data is not None:
-            self.p2.plot(
-                time_fit[idxDown],
-                self.fit_data.eval(
-                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling,
-                    idx_tm=self.fit_data.idx_tm, smooth_w=self.fit_data.smooth_w,
-                    v0t=self.fit_data.v0t, v0r=self.fit_data.v0r
-                ), pen ='g', name='Fit')
-            vertical_line_tinc_tc = pg.InfiniteLine(
-                pos=self.ting_tc, angle=90, pen='y', movable=False, label='Ting tc', labelOpts={'color':'y', 'position':0.5}
-            )
-            self.p2.addItem(vertical_line_tinc_tc, ignoreBounds=True)
+            x = self.indentation
+            y = self.fit_data.eval(x)
+            self.p2.plot(x - self.hertz_d0, y, pen ='g', name='Fit')
             style = pg.PlotDataItem(pen=None)
             self.p2legend.addItem(style, f'Hertz E: {self.hertz_E:.2f} Pa')
             self.p2legend.addItem(style, f'Hertz d0: {self.hertz_d0 + poc[0]:.3E} m')
-            self.p2legend.addItem(style, f'Hertz Red. Chi: {self.hertz_redchi:.3E}')
-            self.p2legend.addItem(style, f'Ting E: {self.ting_E:.2f} Pa')
-            self.p2legend.addItem(style, f'Ting Fluid. Exp.: {self.ting_exp:.3f}')
-            self.p2legend.addItem(style, f'Ting tc: {self.ting_tc+tc_fit:.2f} s')
-            self.p2legend.addItem(style, f'Ting Red. Chi: {self.ting_redchi:.3E}')
-            res = self.p4.plot(
-                time_fit[idxDown],
-                self.fit_data.get_residuals(
-                    time_fit[idxDown], force_fit[idxDown], ind_fit[idxDown], t0=t0_scaling,
-                    idx_tm=self.fit_data.idx_tm, smooth_w=self.fit_data.smooth_w,
-                    v0t=self.fit_data.v0t, v0r=self.fit_data.v0r
-                ), pen=None, symbol='o')
+            self.p2legend.addItem(style, f'Red. Chi: {self.hertz_redchi:.3E}')
+            res = self.p4.plot(x - self.hertz_d0, self.fit_data.get_residuals(x, self.force), pen=None, symbol='o')
             res.setSymbolSize(5)
         
         self.p1.setLabel('left', 'Force', 'N')
         self.p1.setLabel('bottom', 'Indentation', 'm')
         self.p1.setTitle("Force-Indentation")
+        self.p1.addLegend()
         self.p2.setLabel('left', 'Force', 'N')
-        self.p2.setLabel('bottom', 'Time', 's')
-        self.p2.setTitle("Force-Time Ting Fit")
+        self.p2.setLabel('bottom', 'Indentation', 'm')
+        self.p2.setTitle("Force-Indentation Hertz Fit")
         self.p3.setLabel('left', 'Deflection', 'm')
         self.p3.setLabel('bottom', 'zHeight', 'm')
-        self.p3.addLegend()
-        self.p3.setTitle("Deflection-zHeight")
+        self.p3.setTitle('Deflection-zHeight')
         self.p4.setLabel('left', 'Residuals')
-        self.p4.setLabel('bottom', 'Time', 's')
-        self.p4.setTitle("Ting Fit Residuals")
-        
+        self.p4.setLabel('bottom', 'Indentation', 'm')
+        self.p4.setTitle("Hertz Fit Residuals")
+
         self.l.addItem(self.p1)
         self.l.addItem(self.p2)
         self.l.nextRow()
@@ -377,23 +350,57 @@ class TingFitWidget(QtGui.QWidget):
         self.l.addItem(self.p4)
     
     def update_tilt_range(self):
-        dataItems = self.p1.listDataItems()
+        dataItems = self.p3.listDataItems()
         analysis_params = self.params.child('Analysis Params')
-        correct_tilt = analysis_params.child('Correct Tilt').value()
-        tilt_min_offset = analysis_params.child('Min Tilt Offset').value() / 1e9
-        tilt_max_offset = analysis_params.child('Max Tilt Offset').value() / 1e9
-        if self.tilt_roi is not None:
-            self.p1.removeItem(self.tilt_roi)
-        if correct_tilt:
-            self.tilt_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w', movable=False)
-            self.tilt_roi.setZValue(10)
-            self.tilt_roi.setClipItem(dataItems[0])
-            self.p1.removeItem(self.tilt_roi)
-            self.p1.addItem(self.tilt_roi, ignoreBounds=True)
-            self.tilt_roi.setRegion([-1 * tilt_min_offset, -1 * tilt_max_offset])
+        offset_type = analysis_params.child('Offset Type').value()
+        if offset_type == 'percentage':
+            deltaz = self.seg_data.zheight.max() - self.seg_data.zheight.min()
+            maxperc = analysis_params.child('Perc. Max Offset').value() / 1e2
+            minperc = analysis_params.child('Perc. Min Offset').value() / 1e2
+            self.maxoffset = self.seg_data.zheight.min() + deltaz * maxperc
+            self.minoffset = self.seg_data.zheight.min() + deltaz * minperc
         else:
-            self.tilt_roi = None
+            self.maxoffset = analysis_params.child('Abs. Max Offset').value() / 1e9
+            self.minoffset = analysis_params.child('Abs. Min Offset').value() / 1e9
+        if self.offset_roi is not None:
+            self.p3.removeItem(self.offset_roi)
+        self.offset_roi = pg.LinearRegionItem(brush=(50,50,200,0), pen='w', movable=False)
+        self.offset_roi.setZValue(10)
+        self.offset_roi.setClipItem(dataItems[0])
+        self.p3.removeItem(self.offset_roi)
+        self.p3.addItem(self.offset_roi, ignoreBounds=True)
+        self.offset_roi.setRegion([self.minoffset, self.maxoffset])
 
+    def update_fit_range(self):
+        hertz_params = self.params.child('Hertz Fit Params')
+        fit_range_type = hertz_params.child('Fit Range Type').value()
+        if fit_range_type == 'full':
+            angle=90
+            min_val = 0.0
+            max_val = np.max(self.indentation - self.hertz_d0)
+            hertz_params.child('Min Indentation').setValue(min_val * 1e9)
+            hertz_params.child('Max Indentation').setValue(max_val * 1e9)
+        elif fit_range_type == 'indentation':
+            angle=90
+            min_val = hertz_params.child('Min Indentation').value() / 1e9
+            max_val = hertz_params.child('Max Indentation').value() / 1e9
+            if max_val  == 0.0:
+                max_val = np.max(self.indentation - self.hertz_d0)
+                hertz_params.child('Max Indentation').setValue(max_val * 1e9)
+        elif fit_range_type == 'force':
+            angle=0
+            min_val = hertz_params.child('Min Force').value() / 1e9
+            max_val = hertz_params.child('Max Force').value() / 1e9
+            if max_val  == 0.0:
+                max_val = np.max(self.force)
+                hertz_params.child('Max Force').setValue(max_val * 1e9)
+        if self.min_val_line and self.max_val_line:
+            self.p2.removeItem(self.min_val_line)
+            self.p2.removeItem(self.max_val_line)
+        self.min_val_line = pg.InfiniteLine(pos=min_val, angle=angle, pen='y', movable=False, label='Min', labelOpts={'color':'y', 'position':0.7})
+        self.max_val_line = pg.InfiniteLine(pos=max_val, angle=angle, pen='y', movable=False, label='Max', labelOpts={'color':'y', 'position':0.7})
+        self.p2.addItem(self.min_val_line, ignoreBounds=True)
+        self.p2.addItem(self.max_val_line, ignoreBounds=True)
 
     def updateParams(self):
         # Updates params related to the current file
@@ -409,5 +416,19 @@ class TingFitWidget(QtGui.QWidget):
             analysis_params.child('Deflection Sensitivity').setValue(self.session.global_involts)
         
         analysis_params.child('Correct Tilt').sigValueChanged.connect(self.updatePlots)
-        analysis_params.child('Min Tilt Offset').sigValueChanged.connect(self.updatePlots)
-        analysis_params.child('Max Tilt Offset').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Offset Type').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Perc. Min Offset').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Perc. Max Offset').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Abs. Min Offset').sigValueChanged.connect(self.updatePlots)
+        analysis_params.child('Abs. Max Offset').sigValueChanged.connect(self.updatePlots)
+        
+        hertz_params = self.params.child('Hertz Fit Params')
+        hertz_params.child('Fit Range Type').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Max Indentation').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Min Indentation').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Max Force').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Min Force').sigValueChanged.connect(self.update_fit_range)
+        hertz_params.child('Downsample Signal').sigValueChanged.connect(self.updatePlots)
+        hertz_params.child('PoC Method').sigValueChanged.connect(self.updatePlots)
+        hertz_params.child('PoC Window').sigValueChanged.connect(self.updatePlots)
+        hertz_params.child('Sigma').sigValueChanged.connect(self.updatePlots)

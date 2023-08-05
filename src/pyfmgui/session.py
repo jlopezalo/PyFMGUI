@@ -36,6 +36,10 @@ class Session:
         'microrheo_results': None
         }
     
+    def remove_piezo_char_data(self):
+        self.piezo_char_data = None
+        self.piezo_char_file_path = None
+    
     def remove_results(self):
         self.loaded_files_paths = []
         self.loaded_files = {}
@@ -48,6 +52,7 @@ class Session:
     
     def remove_data_and_results(self):
         self.remove_results()
+        self.remove_piezo_char_data()
         self.current_file=None
         self.map_coords = None
         self.current_curve_index=None

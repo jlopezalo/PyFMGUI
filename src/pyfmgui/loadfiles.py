@@ -4,9 +4,9 @@ logger = logging.getLogger()
 # Import for multiprocessing
 import concurrent.futures
 # Get loadfile function from PyFMReader
-from pyafmreader import loadfile
+from pyfmreader import loadfile
 # Get constants
-import pyafmgui.const as const
+import pyfmgui.const as const
 
 def load_single_file(filepath):
     try:

@@ -9,15 +9,15 @@ from scipy.fft import fft, fftfreq
 import logging
 logger = logging.getLogger()
 
-import pyafmgui.const as cts
-from pyafmrheo.utils.signal_processing import *
-from pyafmgui.threading import Worker
-from pyafmgui.compute import compute
-from pyafmgui.widgets.get_params import get_params
+import pyfmgui.const as cts
+from pyfmrheo.utils.signal_processing import *
+from pyfmgui.threading import Worker
+from pyfmgui.compute import compute
+from pyfmgui.widgets.get_params import get_params
 
-from pyafmrheo.utils.force_curves import get_poc_RoV_method, get_poc_regulaFalsi_method
+from pyfmrheo.utils.force_curves import get_poc_RoV_method, get_poc_regulaFalsi_method
 
-class MicrorheoWidget(QtGui.QWidget):
+class MicrorheoWidget(QtWidgets.QWidget):
     def __init__(self, session, parent=None):
         super(MicrorheoWidget, self).__init__(parent)
         self.session = session
@@ -175,7 +175,8 @@ class MicrorheoWidget(QtGui.QWidget):
         if fname != "":
             self.session.piezo_char_file_path = fname
             self.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
-            piezo_char_data = pd.read_csv(self.session.piezo_char_file_path)
+            piezo_char_data_raw = pd.read_csv(self.session.piezo_char_file_path)
+            piezo_char_data = piezo_char_data_raw[["frequency",  "fi_degrees",  "amp_quotient"]]
             self.session.piezo_char_data = piezo_char_data.groupby('frequency', as_index=False).median()
             if self.session.vdrag_widget:
                 self.session.vdrag_widget.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
@@ -325,12 +326,18 @@ class MicrorheoWidget(QtGui.QWidget):
         
         ext_data = force_curve.extend_segments[0][1]
         self.p7.plot(ext_data.zheight, ext_data.vdeflection)
-        if poc_method == 'RoV':
-            comp_PoC = get_poc_RoV_method(zheight, vdeflect, poc_win)
-        else:
-            comp_PoC = get_poc_regulaFalsi_method(zheight, vdeflect, poc_sigma)
 
-        poc = [comp_PoC[0], 0]
+        comp_PoC = [0, 0]
+        if poc_method == 'RoV':
+            comp_PoC = get_poc_RoV_method(ext_data.zheight, ext_data.vdeflection, poc_win)
+        else:
+            comp_PoC = get_poc_regulaFalsi_method(ext_data.zheight, ext_data.vdeflection, poc_sigma)
+        
+        if comp_PoC is not None:
+            poc = [comp_PoC[0], 0]
+        else:
+            poc = [0, 0]
+        
         force_curve.get_force_vs_indentation(poc, spring_k)
         indapp = ext_data.indentation
         forceapp = ext_data.force

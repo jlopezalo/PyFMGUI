@@ -27,8 +27,13 @@ def get_params(params, method):
     
     param_dict['curve_seg'] = analysis_params.child('Curve Segment').value()
     param_dict['correct_tilt'] = analysis_params.child('Correct Tilt').value()
-    param_dict['tilt_min_offset'] = analysis_params.child('Min Tilt Offset').value() / 1e9 #nm
-    param_dict['tilt_max_offset'] = analysis_params.child('Max Tilt Offset').value() / 1e9 #nm
+    param_dict['offset_type'] = analysis_params.child('Offset Type').value()
+    if param_dict['offset_type'] == 'percentage':
+        param_dict['min_offset'] = analysis_params.child('Perc. Min Offset').value() / 1e2
+        param_dict['max_offset'] = analysis_params.child('Perc. Max Offset').value() / 1e2
+    else:
+        param_dict['min_offset'] = analysis_params.child('Abs. Min Offset').value() / 1e9 #nm
+        param_dict['max_offset'] = analysis_params.child('Abs. Max Offset').value() / 1e9 #nm
     
     # HertzFit specific parameters
     if method  in ("HertzFit", "Microrheo", "MicrorheoSine"):
@@ -60,9 +65,9 @@ def get_params(params, method):
         # Define ting params
         ting_params = params.child('Ting Fit Params')
         param_dict['poisson'] = ting_params.child('Poisson Ratio').value()
-        param_dict['poc_method'] = hertz_params.child('PoC Method').value()
-        param_dict['poc_win'] = hertz_params.child('PoC Window').value() / 1e9 #nm
-        param_dict['sigma'] = hertz_params.child('Sigma').value()
+        param_dict['poc_method'] = ting_params.child('PoC Method').value()
+        param_dict['poc_win'] = ting_params.child('PoC Window').value() / 1e9 #nm
+        param_dict['sigma'] = ting_params.child('Sigma').value()
         param_dict['max_ind'] = ting_params.child('Max Indentation').value() / 1e9 #nm
         param_dict['min_ind'] = ting_params.child('Min Indentation').value() / 1e9 #nm
         param_dict['max_force'] = ting_params.child('Max Force').value() / 1e9 #nN

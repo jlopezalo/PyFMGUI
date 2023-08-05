@@ -1,28 +1,31 @@
-from doctest import FAIL_FAST
+import os
 import PyQt5
 from pyqtgraph.Qt import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from scipy.fft import fft, fftfreq
 import numpy as np
+import pandas as pd
+from scipy.fft import fft, fftfreq
 import logging
 logger = logging.getLogger()
 
-import pyafmgui.const as cts
-from pyafmgui.threading import Worker
-from pyafmgui.compute import compute
-from pyafmgui.widgets.get_params import get_params
+import pyfmgui.const as cts
+from pyfmgui.threading import Worker
+from pyfmgui.compute import compute
+from pyfmgui.widgets.get_params import get_params
 
-class PiezoCharWidget(QtGui.QWidget):
+class VDragWidget(QtWidgets.QWidget):
     def __init__(self, session, parent=None):
-        super(PiezoCharWidget, self).__init__(parent)
+        super(VDragWidget, self).__init__(parent)
         self.session = session
         self.current_file = None
         self.file_dict = {}
-        self.session.piezo_char_widget = self
+        self.session.vdrag_widget = self
         self.init_gui()
         if self.session.loaded_files != {}:
             self.updateCombo()
+        if self.session.piezo_char_file_path:
+            self.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
 
     def init_gui(self):
         main_layout = QtWidgets.QHBoxLayout()
@@ -37,7 +40,21 @@ class PiezoCharWidget(QtGui.QWidget):
         self.combobox = QtWidgets.QComboBox()
         self.combobox.currentTextChanged.connect(self.file_changed)
 
-        self.params = Parameter.create(name='params', children=cts.piezochar_params)
+        piezochar_select_layout = QtWidgets.QGridLayout()
+        self.piezochar_label = QtWidgets.QLabel("Piezo Char File")
+        self.piezochar_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.piezochar_label.setMaximumWidth(150)
+        self.piezochar_text = QtWidgets.QTextEdit()
+        self.piezochar_text.setMaximumHeight(40)
+        self.piezochar_bttn = QtWidgets.QPushButton()
+        self.piezochar_bttn.setText("Browse")
+        self.piezochar_bttn.clicked.connect(self.load_piezo_char)
+
+        piezochar_select_layout.addWidget(self.piezochar_label, 0, 0, 1, 1)
+        piezochar_select_layout.addWidget(self.piezochar_text, 0, 1, 1, 2)
+        piezochar_select_layout.addWidget(self.piezochar_bttn, 1, 2, 1, 1)
+
+        self.params = Parameter.create(name='params', children=cts.vdrag_params)
 
         self.paramTree = ParameterTree()
         self.paramTree.setParameters(self.params, showTop=False)
@@ -45,6 +62,7 @@ class PiezoCharWidget(QtGui.QWidget):
         self.l2 = pg.GraphicsLayoutWidget()
 
         params_layout.addWidget(self.combobox, 1)
+        params_layout.addLayout(piezochar_select_layout, 1)
         params_layout.addWidget(self.paramTree, 3)
         params_layout.addWidget(self.pushButton, 1)
         params_layout.addWidget(self.l2, 2)
@@ -76,7 +94,7 @@ class PiezoCharWidget(QtGui.QWidget):
         main_layout.addWidget(self.l, 3)
     
     def closeEvent(self, evnt):
-        self.session.piezo_char_widget = None
+        self.session.vdrag_widget = None
     
     def clear(self):
         self.combobox.clear()
@@ -90,18 +108,20 @@ class PiezoCharWidget(QtGui.QWidget):
             filedict = self.session.loaded_files
         else:
             filedict = {self.session.current_file.filemetadata['Entry_filename']:self.session.current_file}
-        params = get_params(self.params, 'PiezoChar')
-        logger.info('Started PiezoCharacterization...')
+        params = get_params(self.params, "VDrag")
+        params['piezo_char_data'] = self.session.piezo_char_data
+        # compute(self.session, params,  self.filedict, "VDrag")
+        logger.info('Started VDrag...')
         logger.info(f'Processing {len(filedict)} files')
         logger.info(f'Analysis parameters used: {params}')
         self.session.pbar_widget.reset_pbar()
-        self.session.pbar_widget.set_label_text('Computing PiezoCharacterization...')
+        self.session.pbar_widget.set_label_text('Computing VDrag...')
         self.session.pbar_widget.show()
         self.session.pbar_widget.set_pbar_range(0, len(filedict))
         # Create thread to run compute
         self.thread = QtCore.QThread()
         # Create worker to run compute
-        self.worker = Worker(compute, self.session, params, filedict, "PiezoChar")
+        self.worker = Worker(compute, self.session, params, filedict, "VDrag")
         # Move worker to thread
         self.worker.moveToThread(self.thread)
         # When thread starts run worker
@@ -122,7 +142,7 @@ class PiezoCharWidget(QtGui.QWidget):
     
     def reportProgress(self, n):
         self.session.pbar_widget.set_pbar_value(n)
-
+    
     def setPbarRange(self, n):
         self.session.pbar_widget.set_pbar_range(0, n)
     
@@ -132,13 +152,22 @@ class PiezoCharWidget(QtGui.QWidget):
         self.session.pbar_widget.reset_pbar()
         self.pushButton.setEnabled(True)
         self.updatePlots()
-        logger.info('PiezoCharacterization completed!')
+        logger.info('VDrag completed!')
     
-    def open_msg_box(self, message):
-        dlg = QtWidgets.QMessageBox(self)
-        dlg.setWindowTitle("Export Status")
-        dlg.setText(message)
-        dlg.exec()
+    def load_piezo_char(self):
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(
+        	self, 'Open file', './', "Piezo Char Files (*.csv)"
+        )
+        if fname != "":
+            self.session.piezo_char_file_path = fname
+            self.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
+            piezo_char_data_raw = pd.read_csv(self.session.piezo_char_file_path)
+            piezo_char_data = piezo_char_data_raw[["frequency",  "fi_degrees",  "amp_quotient"]]
+            self.session.piezo_char_data = piezo_char_data.groupby('frequency', as_index=False).median()
+            if self.session.microrheo_widget:
+                self.session.microrheo_widget.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
+        else:
+            self.piezochar_text.setText("")
 
     def update(self):
         self.current_file = self.session.current_file
@@ -206,6 +235,12 @@ class PiezoCharWidget(QtGui.QWidget):
     def manual_override(self):
         pass
 
+    def open_msg_box(self, message):
+        dlg = QtWidgets.QMessageBox(self)
+        dlg.setWindowTitle("Export Status")
+        dlg.setText(message)
+        dlg.exec()
+
     def updatePlots(self):
 
         if not self.current_file:
@@ -219,10 +254,8 @@ class PiezoCharWidget(QtGui.QWidget):
         self.p5.clear()
         self.p6.clear()
 
-        self.freqs = None
-        self.fi = None
-        self.amp_quot = None
-        self.gamma2 = None
+        self.Bh = None
+        self.Hd = None
 
         analysis_params = self.params.child('Analysis Params')
         current_file_id = self.current_file.filemetadata['Entry_filename']
@@ -240,44 +273,52 @@ class PiezoCharWidget(QtGui.QWidget):
             self.open_msg_box(f'No modulation segments found in file:\n {current_file_id}')
             return
 
-        piezo_char_result = self.session.piezo_char_results.get(current_file_id, None)
+        vdrag_result = self.session.vdrag_results.get(current_file_id, None)
 
-        if piezo_char_result:
-            for curve_indx, curve_piezo_char_result in piezo_char_result:
+        if vdrag_result:
+            for curve_indx, curve_vdrag_result in vdrag_result:
                 try:
-                    if curve_piezo_char_result is None:
+                    if curve_vdrag_result is None:
                         continue
                     if curve_indx == self.session.current_curve_index:
-                        self.freqs = curve_piezo_char_result[0]
-                        self.fi = curve_piezo_char_result[1]
-                        self.amp_quot = curve_piezo_char_result[2]
+                        self.Bh = curve_vdrag_result[1]
+                        self.Hd = curve_vdrag_result[2]
+                        distances = curve_vdrag_result[4]
                 except Exception:
                     continue
-        t0 = 0
-        n_segments = len(modulation_segs)
-        for i, (_, segment) in enumerate(modulation_segs):
-            time = segment.time
-            freq = segment.segment_metadata['frequency']
-            deltat = time[1] - time[0]
-            nfft = len(segment.vdeflection)
-            W = fftfreq(nfft, d=deltat)
-            fft_height = fft(segment.zheight, nfft)
-            psd_height = fft_height * np.conj(fft_height) / nfft
-            fft_deflect = fft(segment.vdeflection, nfft)
-            psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
-            L = np.arange(1, np.floor(nfft/2), dtype='int')
-            plot_time = time + t0
-            self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
-            self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")
-            self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{freq} Hz")
-            self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{freq} Hz")
-            t0 = plot_time[-1]
-         
-        if self.fi is not None:
-            self.p5.plot(self.freqs, self.fi, symbol='o')
         
-        if self.amp_quot is not None:
-            self.p6.plot(self.freqs, self.amp_quot, symbol='o')
+        curve_segments = force_curve.get_segments()
+        
+        t0 = 0
+        n_segments = len(curve_segments)
+        for i, (seg_id, segment) in enumerate(curve_segments):
+            time = segment.time
+            plot_time = time + t0
+            if segment.segment_type == 'Modulation':
+                freq = segment.segment_metadata['frequency']
+                deltat = time[1] - time[0]
+                nfft = len(segment.vdeflection)
+                W = fftfreq(nfft, d=deltat)
+                fft_height = fft(segment.zheight, nfft)
+                psd_height = fft_height * np.conj(fft_height) / nfft
+                fft_deflect = fft(segment.vdeflection, nfft)
+                psd_deflect = fft_deflect * np.conj(fft_deflect) / nfft
+                L = np.arange(1, np.floor(nfft/2), dtype='int')
+                self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p3.plot(W[L], psd_height[L].real, pen=(i,n_segments), name=f"{freq} Hz")
+                self.p4.plot(W[L], psd_deflect[L].real, pen=(i,n_segments), name=f"{freq} Hz")
+            else:
+                self.p1.plot(plot_time, segment.zheight, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
+                self.p2.plot(plot_time, segment.vdeflection, pen=(i,n_segments), name=f"{segment.segment_type} {seg_id}")
+            t0 = plot_time[-1]
+        
+        if self.Hd is not None:
+            self.p5.plot(distances, self.Hd.real, pen='r', symbol='o', symbolBrush='r', name='Hd Real')
+            self.p5.plot(distances, self.Hd.imag, pen='b', symbol='o', symbolBrush='b', name='Hd Imag')
+        
+        if self.Bh is not None:
+            self.p6.plot(distances, self.Bh, symbol='o')
         
         self.p1.setLabel('left', 'zHeight', 'm')
         self.p1.setLabel('bottom', 'Time', 's')
@@ -301,15 +342,14 @@ class PiezoCharWidget(QtGui.QWidget):
         self.p4.setLogMode(True, False)
         self.p4.addLegend()
 
-        self.p5.setLabel('left', 'Fi', '°')
-        self.p5.setLabel('bottom', 'Frequency', 'Hz')
-        self.p5.setTitle("Fi-Frequency")
-        self.p5.setLogMode(True, False)
+        self.p5.setLabel('left', 'Hd')
+        self.p5.setLabel('bottom', 'Distance', 'm')
+        self.p5.setTitle("Hd-Distance")
+        self.p5.addLegend()
 
-        self.p6.setLabel('left', 'Amp Quotient')
-        self.p6.setLabel('bottom', 'Frequency', 'Hz')
-        self.p6.setTitle("Amp Quotient-Frequency")
-        self.p6.setLogMode(True, False)
+        self.p6.setLabel('left', 'Bh', 'Ns/m')
+        self.p6.setLabel('bottom', 'Distance', 'm')
+        self.p6.setTitle("Bh-Distances")
         
         self.l.addItem(self.p1)
         self.l.addItem(self.p2)
