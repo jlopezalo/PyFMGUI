@@ -192,7 +192,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				'Open file', 
 				r'./', 
 				"""
-				JPK files (*.jpk-force *.jpk-force-map *.jpk-qi-data, *.jpk-force.zip *.jpk-force-map.zip *.jpk-qi-data.zip);;
+				JPK files (*.jpk-force *.jpk-force-map *.jpk-qi-data *.jpk-force.zip *.jpk-force-map.zip *.jpk-qi-data.zip);;
 				Nanoscope files (*.spm *.pfc)
 				"""
 			)

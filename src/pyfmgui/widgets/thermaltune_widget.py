@@ -131,7 +131,7 @@ class ThermalTuneWidget(QtWidgets.QWidget):
         data, fname = self.load_data()
         if data is None or fname is None:
             return
-        self.inair_thermal_ampl, self.inair_thermal_freq, _, self.inair_params = data
+        self.inair_thermal_ampl, _, self.inair_thermal_freq, _, self.inair_params = data
         self.air_thermal_text.setText(fname)
         resonancef = self.inair_params['parameter.f']
         self.air_roi.setRegion([np.log10(resonancef/2), np.log10(resonancef*2)])
@@ -141,7 +141,7 @@ class ThermalTuneWidget(QtWidgets.QWidget):
         data, fname = self.load_data()
         if data is None or fname is None:
             return
-        self.inliquid_thermal_ampl, self.inliquid_thermal_freq, _, self.inliquid_params = data
+        self.inliquid_thermal_ampl, _, self.inliquid_thermal_freq, _, self.inliquid_params = data
         self.lq_thermal_text.setText(fname)
         resonancef = self.inliquid_params['parameter.f']
         self.lq_roi.setRegion([np.log10(resonancef/2), np.log10(resonancef*2)])
@@ -168,16 +168,16 @@ class ThermalTuneWidget(QtWidgets.QWidget):
             style = pg.PlotDataItem(pen=None)
             self.p1legend.addItem(style, f'K Air: {self.k0_air:.3f} N/m')
             self.p1legend.addItem(style, f'K Air GCI: {self.GCI_cant_springConst_air:.3f} N/m')
-            self.p1legend.addItem(style, f'InVOLS Air: { self.involsValue_air:.3f} nm/V')
-            self.p1legend.addItem(style, f'InVOLS H Air: {self.invOLS_H_air:.3f} nm/V')
+            self.p1legend.addItem(style, f'InVOLS Air: { self.involsValue_air * 1e9:.3f} nm/V')
+            self.p1legend.addItem(style, f'InVOLS H Air: {self.invOLS_H_air * 1e9:.3f} nm/V')
         
         if self.thermal_fit_lq is not None:
             self.p1.plot(self.freq_fit_lq, self.thermal_fit_lq, pen={'color':'g', 'width': 3}, name='Liquid SHO Fit')
             style = pg.PlotDataItem(pen=None)
             self.p1legend.addItem(style, f'K Liquid: {self.k0_lq:.3f} N/m')
             self.p1legend.addItem(style, f'K Liquid GCI: {self.GCI_cant_springConst_lq:.3f} N/m')
-            self.p1legend.addItem(style, f'InVOLS Liquid: { self.involsValue_lq:.3f} nm/V')
-            self.p1legend.addItem(style, f'InVOLS H Liquid: {self.invOLS_H_lq:.3f} nm/V')
+            self.p1legend.addItem(style, f'InVOLS Liquid: { self.involsValue_lq * 1e9:.3f} nm/V')
+            self.p1legend.addItem(style, f'InVOLS H Liquid: {self.invOLS_H_lq * 1e9:.3f} nm/V')
 
         self.p1.setTitle("Amplitude-Frequency")
         self.p1.setLabel('left', 'Amplitude (pm^2/V)')
@@ -264,7 +264,8 @@ class ThermalTuneWidget(QtWidgets.QWidget):
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
                     A1_air, fR1_air, Q1_air, self.Tc, self.RH, 'air',
-                    self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
+                    self.cantType, username = self.session.sader_username,
+                    password = self.session.sader_password, selectedCantCode = self.selectedCantCode
                 )
         # Liquid
         if self.inliquid_thermal_ampl is not None and self.inliquid_thermal_freq is not None:
@@ -285,6 +286,7 @@ class ThermalTuneWidget(QtWidgets.QWidget):
                 Stark_Chi_force_constant(
                     self.cantiWidth, self.cantiLen, self.cantiWidthLegs,
                     A1_lq, fR1_lq, Q1_lq, self.Tc, self.RH, 'water', 
-                    self.cantType, self.session.sader_username, self.session.sader_password, self.selectedCantCode
+                    self.cantType, username = self.session.sader_username,
+                    password = self.session.sader_password, selectedCantCode = self.selectedCantCode
                 )
         self.update_plot()

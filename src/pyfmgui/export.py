@@ -2,6 +2,7 @@ import contextlib
 import os
 import pandas as pd
 import numpy as np
+import traceback
 
 # Import for multiprocessing
 import concurrent.futures
@@ -98,7 +99,7 @@ def get_file_results(result_type, file_metadata_and_results):
             'file_path': file_path, 'file_id': file_id, 
             'curve_idx': curve_indx, 'kcanti': k, 'defl_sens': defl_sens
         }
-        with contextlib.suppress(Exception):
+        try:
             if result_type == 'hertz_results' and curve_result[1] is not None:
                 hertz_result = curve_result[1]
                 if hertz_result is not None:
@@ -125,6 +126,8 @@ def get_file_results(result_type, file_metadata_and_results):
                 microrheo_result = curve_result[1]
                 if microrheo_result is not None:
                     row_dict = unpack_microrheo_result(row_dict, microrheo_result)
+        except Exception as e:
+            traceback.print_exc(e)
         file_results.append(row_dict)
     return file_results
 
@@ -166,7 +169,7 @@ def prepare_export_results(session, progress_callback, range_callback, step_call
             # Flatten result list
             flat_file_results = [item for sublist in file_results for item in sublist]
             # Create dataframe from list of dicts
-            outputdf = pd.DataFrame(flat_file_results)
+            outputdf = pd.DataFrame(flat_file_results) # This consumes too much memory?
             # There are some parameters in the dicts that contain lists.
             # The explode method creates a new row from each item in the list.
             if result_type == 'piezochar_results':
