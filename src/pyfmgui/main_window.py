@@ -38,7 +38,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		file = bar.addMenu("File")
 		file.addAction("Load Single File")
 		file.addAction("Load Folder")
-		file.addAction("Export Results")
+		#file.addAction("Export Results")
 		file.addAction("Remove All Files And Results")
 		view = bar.addMenu("View")
 		view.addAction("Cascade")
@@ -78,6 +78,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		openMicrorheo.setToolTip("Open new Hertz Fit data analysis window.")
 		openMicrorheo.triggered.connect(self.open_analysis_window)
 
+		openExportResults = QtGui.QAction("Export Results", self)
+		openExportResults.setToolTip("Open new Export Results window.")
+		openExportResults.triggered.connect(self.open_analysis_window)
+
 		openMacro = QtGui.QAction("Macrowidget", self)
 		openMacro.setToolTip("Open new Macro window.")
 		openMacro.triggered.connect(self.open_analysis_window)
@@ -93,6 +97,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.toolbar.addAction(openPiezoChar)
 		self.toolbar.addAction(openVDrag)
 		self.toolbar.addAction(openMicrorheo)
+		self.toolbar.addAction(openExportResults)
 		self.toolbar.addAction(openMacro)
 		self.toolbar.addAction(openLoggerDialog)
 
@@ -167,6 +172,13 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.session.microrheo_widget.showMinimized()
 			else:
 				self.session.microrheo_widget.showMaximized()
+		elif action == "Export Results":
+			if self.session.export_dialog is None:
+				widget_to_open = ExportDialog(self.session)
+			elif self.session.export_dialog.isMaximized():
+				self.session.export_dialog.showMinimized()
+			else:
+				self.session.export_dialog.showMaximized()
 		elif action == "Macrowidget":
 			if self.session.macro_widget is None:
 				widget_to_open = MacroWidget(self.session)
@@ -198,7 +210,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			)
 			if fname != "" and fname is not None:
 				self.load_files([fname])
-		if q.text() == "Load Folder":
+		elif q.text() == "Load Folder":
 			dirname = QtWidgets.QFileDialog.getExistingDirectory(
 				self, 'Choose Directory', r'./'
 			)
@@ -206,15 +218,11 @@ class MainWindow(QtWidgets.QMainWindow):
 				valid_files = self.getFileList(dirname)
 				if valid_files != []:
 					self.load_files(valid_files)
-		if q.text() == "Export Results":
-			if self.session.export_dialog is None:
-				self.session.export_dialog = ExportDialog(self.session)
-			self.add_subwindow(self.session.export_dialog, 'Export Data')
-		if q.text() == "Cascade":
+		elif q.text() == "Cascade":
 			self.mdi.cascadeSubWindows()
-		if q.text() == "Tiled":
+		elif q.text() == "Tiled":
 			self.mdi.tileSubWindows()
-		if q.text() == "Remove All Files And Results":
+		elif q.text() == "Remove All Files And Results":
 			self.remove_all_files_and_results()
 	
 	def getFileList(self, directory):

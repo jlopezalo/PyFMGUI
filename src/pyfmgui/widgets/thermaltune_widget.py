@@ -49,6 +49,9 @@ class ThermalTuneWidget(QtWidgets.QWidget):
         air_thermal_browse_bttn = QtWidgets.QPushButton()
         air_thermal_browse_bttn.setText("Browse")
         air_thermal_browse_bttn.clicked.connect(self.load_air_data)
+        air_thermal_clear_bttn = QtWidgets.QPushButton()
+        air_thermal_clear_bttn.setText("Clear Air Data")
+        air_thermal_clear_bttn.clicked.connect(self.clear_air_data)
 
         lq_thermal_label = QtWidgets.QLabel("Liquid Thermal File")
         lq_thermal_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -58,13 +61,18 @@ class ThermalTuneWidget(QtWidgets.QWidget):
         lq_thermal_browse_bttn = QtWidgets.QPushButton()
         lq_thermal_browse_bttn.setText("Browse")
         lq_thermal_browse_bttn.clicked.connect(self.load_liquid_data)
+        lq_thermal_clear_bttn = QtWidgets.QPushButton()
+        lq_thermal_clear_bttn.setText("Clear Liq. Data")
+        lq_thermal_clear_bttn.clicked.connect(self.clear_lq_data)
 
         file_select_layout.addWidget(air_thermal_label, 0, 0, 1, 1)
         file_select_layout.addWidget(self.air_thermal_text, 0, 1, 1, 2)
         file_select_layout.addWidget(air_thermal_browse_bttn, 1, 2, 1, 1)
+        file_select_layout.addWidget(air_thermal_clear_bttn, 1, 1, 1, 1)
         file_select_layout.addWidget(lq_thermal_label, 2, 0, 1, 1)
         file_select_layout.addWidget(self.lq_thermal_text, 2, 1, 1, 2)
         file_select_layout.addWidget(lq_thermal_browse_bttn, 3, 2, 1, 1)
+        file_select_layout.addWidget(lq_thermal_clear_bttn, 3, 1, 1, 1)
 
         login_layout = QtWidgets.QGridLayout()
         user_name_label = QtWidgets.QLabel("SADER Username")
@@ -145,6 +153,18 @@ class ThermalTuneWidget(QtWidgets.QWidget):
         self.lq_thermal_text.setText(fname)
         resonancef = self.inliquid_params['parameter.f']
         self.lq_roi.setRegion([np.log10(resonancef/2), np.log10(resonancef*2)])
+        self.update_plot()
+    
+    def clear_air_data(self):
+        self.inair_thermal_ampl = None
+        self.inair_thermal_freq = None
+        self.air_thermal_text.setText("")
+        self.update_plot()
+    
+    def clear_lq_data(self):
+        self.inliquid_thermal_ampl = None
+        self.inliquid_thermal_freq = None
+        self.lq_thermal_text.setText("")
         self.update_plot()
     
     def update_plot(self):

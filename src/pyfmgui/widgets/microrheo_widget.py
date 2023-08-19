@@ -53,10 +53,14 @@ class MicrorheoWidget(QtWidgets.QWidget):
         self.piezochar_bttn = QtWidgets.QPushButton()
         self.piezochar_bttn.setText("Browse")
         self.piezochar_bttn.clicked.connect(self.load_piezo_char)
+        self.clear_piezochar_bttn = QtWidgets.QPushButton()
+        self.clear_piezochar_bttn.setText("Clear")
+        self.clear_piezochar_bttn.clicked.connect(self.clear_piezo_char)
 
         piezochar_select_layout.addWidget(self.piezochar_label, 0, 0, 1, 1)
         piezochar_select_layout.addWidget(self.piezochar_text, 0, 1, 1, 2)
         piezochar_select_layout.addWidget(self.piezochar_bttn, 1, 2, 1, 1)
+        piezochar_select_layout.addWidget(self.clear_piezochar_bttn, 1, 1, 1, 1)
 
         self.params = Parameter.create(name='params', children=cts.microrheo_params)
 
@@ -182,6 +186,13 @@ class MicrorheoWidget(QtWidgets.QWidget):
                 self.session.vdrag_widget.piezochar_text.setText(os.path.basename(self.session.piezo_char_file_path))
         else:
             self.piezochar_text.setText("")
+    
+    def clear_piezo_char(self):
+        self.session.piezo_char_file_path = None
+        self.session.piezo_char_data = None
+        self.piezochar_text.setText("")
+        if self.session.vdrag_widget:
+                self.session.vdrag_widget.piezochar_text.setText("")
 
     def update(self):
         self.current_file = self.session.current_file

@@ -6,7 +6,7 @@ from .canti_list import canti_list
 # v.x.0.0 --> Major release
 # v.0.x.0 --> Minor release
 # v.0.0.x --> Bug fix
-pyFM_VERSION = "PyFM v.0.1.2"
+pyFM_VERSION = "PyFM v.0.1.3"
 
 # FILE CONSTANTS ##################################################
 jpk_file_extensions = ('jpk-force', 'jpk-force-map', 'jpk-qi-data')

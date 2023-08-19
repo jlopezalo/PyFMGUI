@@ -6,8 +6,10 @@ from pyfmgui.threading import Worker
 from pyfmgui.export import result_types, prepare_export_results, export_results
 
 class ExportDialog(QtWidgets.QWidget):
-    def __init__(self, session):
-        super().__init__()
+    def __init__(self, session, parent=None):
+        super(ExportDialog, self).__init__(parent)
+        self.session = session
+        self.session.export_dialog = self
 
         self.session = session
         self.dirname = None
