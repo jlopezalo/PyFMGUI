@@ -18,7 +18,7 @@ https://github.com/jlopezalo/PyFMGUI/issues
 ## Run software
 A zip containing the frozen application can be found and downloaded here:
 
-https://doi.org/10.5281/zenodo.8267440
+https://doi.org/10.5281/zenodo.8301684
 
 To run, extract the contents of the .zip and run the main.exe file.
 
