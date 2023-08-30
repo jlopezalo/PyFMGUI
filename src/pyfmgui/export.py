@@ -127,7 +127,9 @@ def get_file_results(result_type, file_metadata_and_results):
                 if microrheo_result is not None:
                     row_dict = unpack_microrheo_result(row_dict, microrheo_result)
         except Exception as e:
-            traceback.print_exc(e)
+            file_results.append(row_dict)
+            print(e)
+            continue
         file_results.append(row_dict)
     return file_results
 
