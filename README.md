@@ -28,6 +28,10 @@ To run, extract the contents of the .zip and run the main.exe file.
 git clone https://github.com/jlopezalo/PyFMGUI.git
 cd ./PyFMGUI
 ```
+- Create an environment with python 3.9
+conda create -n yourenvname python=3.9 
+conda activate yourenvname
+
 - Install the dependencies from requirements.txt
 ```
 pip install -r requirements.txt
