@@ -15,6 +15,7 @@ from pyfmgui.main_window import MainWindow
 from pyfmgui.session import Session
 
 def main():
+	print("hell ya")
 	# Create PyQT5 application object
 	app = QtWidgets.QApplication(sys.argv)
 	
