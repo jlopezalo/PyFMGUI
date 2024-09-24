@@ -1,5 +1,9 @@
 # PyFMGUI
 
+## Currently the version in active development is located in the following fork: 
+https://github.com/DyNaMo-INSERM/PyFMGUI_DyNaMo.git
+Here you will find the latest release of the code being maintained by the team at the DyNaMo-INSERM lab.
+
 ## Introduction
 PyFMGUI is an application for the analysis of force microscopy data capable of analyzing Nanoscope and JPK AFM files.
 
